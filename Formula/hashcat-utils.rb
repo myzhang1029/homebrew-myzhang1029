@@ -5,6 +5,10 @@ class HashcatUtils < Formula
   sha256 "9ddda7f9dfeebfde95b2e980241730262a7f512ceb37941c38b590721d6b6921"
   license "MIT"
 
+  livecheck do
+    url "https://github.com/hashcat/hashcat-utils.git"
+  end
+
   def install
     system "make", "-C", "src", "native"
     mkdir bin
