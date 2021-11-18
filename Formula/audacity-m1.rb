@@ -2,7 +2,7 @@ class AudacityM1 < Formula
   desc "Multi-track audio editor and recorder"
   homepage "https://www.audacityteam.org/"
   url "https://github.com/myzhang1029/audacity-applesilicon/archive/refs/heads/arm64-macos.tar.gz"
-  version "3.1.0-m1-alpha"
+  version "3.1.2-m1-alpha"
   license "GPL-2.0-only"
   head "https://github.com/myzhang1029/audacity-applesilicon.git", branch: "arm64-macos"
 
