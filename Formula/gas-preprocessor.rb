@@ -3,7 +3,7 @@ class GasPreprocessor < Formula
   homepage "https://github.com/myzhang1029/gas-preprocessor"
   url "https://github.com/myzhang1029/gas-preprocessor/raw/master/gas-preprocessor.pl"
   version "latest"
-  sha256 "beebd47ee4ef49a3d69183b1b3142e2b8c28fe68d6bc37bf8ff8a6f3cde56584"
+  sha256 "92bcf5b68bb67fdc102373b96fd8177cb49320b0b290d89714aa71b5486f3fed"
   license "GPL-2.0-or-later"
 
   def install
