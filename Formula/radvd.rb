@@ -25,6 +25,46 @@ class Radvd < Formula
   end
 
   test do
-    system "false"
+    (testpath/"radvd.conf").write <<~EOS
+      # Example config
+      interface lo
+      {
+          AdvSendAdvert on;
+          IgnoreIfMissing on;
+          MinRtrAdvInterval 3;
+          MaxRtrAdvInterval 10;
+          AdvDefaultPreference low;
+          AdvHomeAgentFlag off;
+          prefix 2001:db8:1:0::/64
+          {
+              AdvOnLink on;
+              AdvAutonomous on;
+              AdvRouterAddr off;
+          };
+          prefix 0:0:0:1234::/64
+          {
+              AdvOnLink on;
+              AdvAutonomous on;
+              AdvRouterAddr off;
+              Base6to4Interface ppp0;
+              AdvPreferredLifetime 120;
+              AdvValidLifetime 300;
+          };
+          route 2001:db0:fff::/48
+          {
+              AdvRoutePreference high;
+              AdvRouteLifetime 3600;
+          };
+          RDNSS 2001:db8::1 2001:db8::2
+          {
+              AdvRDNSSLifetime 30;
+          };
+          DNSSL branch.example.com example.com
+          {
+              AdvDNSSLLifetime 30;
+          };
+      };
+    EOS
+    system sbin/"radvd", "-cC", testpath/"radvd.conf"
   end
 end
