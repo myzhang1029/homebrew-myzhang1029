@@ -20,6 +20,7 @@ class Radvd < Formula
   uses_from_macos "bison" => :build
 
   def install
+    system "./autogen.sh" if build.head?
     system "./configure", *std_configure_args, "--disable-silent-rules"
     system "make", "install"
   end
