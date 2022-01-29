@@ -6,6 +6,8 @@ class AudacityM1 < Formula
   license "GPL-2.0-only"
   head "https://github.com/myzhang1029/audacity-applesilicon.git", branch: "arm64-macos"
 
+  deprecate! date: "2022-01-25", because: "is done in audacity/audacity #2416"
+
   depends_on "cmake" => :build
   depends_on "conan" => :build
   depends_on arch: :arm64
