@@ -3,7 +3,7 @@ class Myzhang1029Tools < Formula
   homepage "https://github.com/myzhang1029"
   url "https://example.com/index.html"
   version "1.0"
-  license "cc0"
+  license "CC0-1.0"
 
   depends_on "aria2"
   depends_on "arping"

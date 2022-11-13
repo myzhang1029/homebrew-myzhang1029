@@ -1,6 +1,3 @@
-# Documentation: https://docs.brew.sh/Formula-Cookbook
-#                https://rubydoc.brew.sh/Formula
-# PLEASE REMOVE ALL GENERATED COMMENTS BEFORE SUBMITTING YOUR PULL REQUEST!
 class Nbtscan < Formula
   desc "Scan networks searching for NetBIOS information"
   homepage "https://github.com/resurrecting-open-source-projects/nbtscan"
@@ -15,8 +12,8 @@ class Nbtscan < Formula
     regex(%r{href=.*?/tag/?(\d+(?:\.\d+)+)["' >]}i)
   end
 
-  depends_on "automake" => :build
   depends_on "autoconf" => :build
+  depends_on "automake" => :build
 
   def install
     system "./autogen.sh"

@@ -1,8 +1,9 @@
 class RockyouList < Formula
   desc "Kali Linux word list rockyou.txt"
   homepage "https://gitlab.com/kalilinux/packages/wordlists"
-  url "https://gitlab.com/kalilinux/packages/wordlists/-/raw/debian/0.3-1kali3/rockyou.txt.gz"
-  sha256 "ded2d962815e1256df8f3a0d25173c4b21b6eee636117c36999246725a6d8f9f"
+  url "https://github.com/myzhang1029/rockyou-wordlist/raw/main/rockyou.txt.gz"
+  version "1.1"
+  sha256 "5324796f5cf98e3daa168c90662a003a84183f4c8c26c07a629b641d426c2be7"
   license "Free"
 
   def install
