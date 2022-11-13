@@ -34,48 +34,37 @@ class Ndisc6 < Formula
   end
 
   test do
-    system bin/"ndisc6", "-V"
+    system bin/"addr2name", "--version"
+    system bin/"name2addr", "--version"
+    system bin/"ndisc6", "--version"
+    system bin/"rdisc6", "--version"
+    system bin/"rltraceroute6", "--version"
+    system bin/"tcpspray", "--version"
+    system bin/"tcpspray6", "--version"
+    system bin/"tcptraceroute6", "--version"
+    system bin/"tracert6", "--version"
+    system sbin/"rdnssd", "--version"
   end
 end
 
 __END__
-diff --git a/rdnss/icmp.c b/rdnss/icmp.c
-index f85798d..4f9f966 100644
---- a/rdnss/icmp.c
-+++ b/rdnss/icmp.c
-@@ -22,6 +22,7 @@
- #endif
- 
- #include <stdint.h>
-+#include <string.h>
- 
- #include <sys/types.h>
- #include <sys/socket.h>
 diff --git a/rdnss/rdnssd.h b/rdnss/rdnssd.h
-index 3def220..68668a6 100644
+index 3def220..bbbda79 100644
 --- a/rdnss/rdnssd.h
 +++ b/rdnss/rdnssd.h
-@@ -32,23 +32,6 @@ extern const rdnss_src_t rdnss_netlink, rdnss_icmp;
+@@ -32,6 +32,7 @@ extern const rdnss_src_t rdnss_netlink, rdnss_icmp;
  #define ND_OPT_RDNSS 25
  #define ND_OPT_DNSSL 31
  
--struct nd_opt_rdnss
--{
--	uint8_t nd_opt_rdnss_type;
--	uint8_t nd_opt_rdnss_len;
--	uint16_t nd_opt_rdnss_reserved;
--	uint32_t nd_opt_rdnss_lifetime;
--	/* followed by one or more IPv6 addresses */
--};
--
--struct nd_opt_dnssl
--{
--	uint8_t nd_opt_dnssl_type;
--	uint8_t nd_opt_dnssl_len;
--	uint16_t nd_opt_dnssl_reserved;
--	uint32_t nd_opt_dnssl_lifetime;
--	/* followed by one or more domain names */
--};
++#ifndef __APPLE__
+ struct nd_opt_rdnss
+ {
+        uint8_t nd_opt_rdnss_type;
+@@ -49,6 +50,7 @@ struct nd_opt_dnssl
+        uint32_t nd_opt_dnssl_lifetime;
+        /* followed by one or more domain names */
+ };
++#endif
  
  # ifdef __cplusplus
  extern "C" {
