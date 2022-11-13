@@ -3,7 +3,7 @@ class RockyouList < Formula
   homepage "https://gitlab.com/kalilinux/packages/wordlists"
   url "https://github.com/myzhang1029/rockyou-wordlist/raw/main/rockyou.txt.gz"
   version "1.1"
-  sha256 "5324796f5cf98e3daa168c90662a003a84183f4c8c26c07a629b641d426c2be7"
+  sha256 "29617d0719e96f04e8d4bedbee6d4a5631525094985b3665209e93a08ce4aee3"
   license "Free"
 
   def install
