@@ -1,8 +1,8 @@
 class Ndisc6 < Formula
   desc "IPv6 diagnostic tools for Linux and BSD"
   homepage "https://www.remlab.net/ndisc6/"
-  url "https://www.remlab.net/files/ndisc6/ndisc6-1.0.6.tar.bz2"
-  sha256 "a713210e9be1f15cfa0809f4c2728b00cd5f25881d7585126986982055453cfb"
+  url "https://www.remlab.net/files/ndisc6/ndisc6-1.0.7.tar.bz2"
+  sha256 "edc431d70510d7321a5a39d243de0d0f63846dc9145b3b549c7348cc2bc96609"
   license "GPL-2.0-or-later"
 
   livecheck do
