@@ -30,9 +30,9 @@ class Tqsl < Formula
       "-DBDB_LIBRARY=#{Formula["berkeley-db"].opt_lib}/libdb.dylib",
       *std_cmake_args
     system "cmake", "--build", "build"
-    system "cp", "-r", "build/apps/tqsl.app", prefix
+    cp_r "build/apps/tqsl.app", prefix
     # Copy config.xml or TQSL will not start
-    system "install", "-m", "644", "src/config.xml", "#{prefix}/tqsl.app/Contents/Resources"
+    cp "src/config.xml", "#{prefix}/tqsl.app/Contents/Resources"
   end
 
   def caveats

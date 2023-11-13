@@ -5,6 +5,10 @@ class Libeemd < Formula
   sha256 "97f5bea86444a4e706eab5c840b3576fbf972cb0d2eec5a3f4167ef8898c59a5"
   license "GPL-3.0"
 
+  livecheck do
+    url :homepage
+  end
+
   depends_on "autoconf" => :build
   depends_on "automake" => :build
   depends_on "libtool" => :build

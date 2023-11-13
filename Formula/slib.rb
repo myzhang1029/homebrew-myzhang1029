@@ -5,6 +5,10 @@ class Slib < Formula
   sha256 "8fd681cde527805607b7348cce153413f25b920a953601af506e7c2dfe1b7f33"
   license "LGPL-3.0-or-later"
 
+  livecheck do
+    url :homepage
+  end
+
   depends_on "cmake" => :build
 
   def install

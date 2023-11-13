@@ -7,8 +7,8 @@ class Radvd < Formula
 
   livecheck do
     url :stable
+    regex(/^v?(\d+(?:\.\d+)+)$/i)
     strategy :github_latest
-    regex(%r{href=.*?/tag/v?(\d+(?:\.\d+)+)["' >]}i)
   end
 
   head do

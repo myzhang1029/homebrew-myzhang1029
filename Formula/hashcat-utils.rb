@@ -15,7 +15,7 @@ class HashcatUtils < Formula
     system "sh", "-c", <<~HEREDOC
       for bin in src/*.bin
       do
-        install -c -s -m 755 \"$bin\" \"#{bin}/$(basename \"$bin\" | cut -f1 -d.)\"
+        install -c -s -m 755 "$bin" "#{bin}/$(basename "$bin" | cut -f1 -d.)"
       done
     HEREDOC
   end

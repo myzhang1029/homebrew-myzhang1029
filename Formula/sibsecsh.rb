@@ -5,6 +5,10 @@ class Sibsecsh < Formula
   sha256 "2260018751f78ade862b79b605b723abe2d6ece246b2f7dbb43e79b2491a8608"
   license "AGPL-3.0-or-later"
 
+  livecheck do
+    url :homepage
+  end
+
   depends_on "rust" => :build
 
   def install
