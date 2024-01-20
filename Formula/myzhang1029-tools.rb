@@ -57,7 +57,7 @@ class Myzhang1029Tools < Formula
   depends_on "tor"
   depends_on "trash"
   depends_on "you-get"
-  depends_on "youtube-dl"
+  depends_on "yt-dlp"
   depends_on "zmap"
   depends_on "zstd"
 
