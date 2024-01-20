@@ -35,7 +35,6 @@ class Myzhang1029Tools < Formula
   depends_on "lsusb"
   depends_on "lzip"
   depends_on "md5deep"
-  depends_on "mitmproxy"
   depends_on "mosh"
   depends_on "nbtscan"
   depends_on "ndisc6"
