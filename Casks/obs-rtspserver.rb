@@ -1,6 +1,6 @@
 cask "obs-rtspserver" do
-  version "3.0.0"
-  sha256 "b467d04f1af7763d942a13815dd0ae50ad7e6f62be4630048326565c70fcfd17"
+  version "3.1.0"
+  sha256 "c121195940cd8c43e2cdc73f730bc1655fbd1582fdc654e0170cb0f98687ab1e"
 
   url "https://github.com/iamscottxu/obs-rtspserver/releases/download/v#{version}/obs-rtspserver-v#{version}-macos-universal.pkg"
   name "obs-rtspserver"

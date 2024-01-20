@@ -1,8 +1,8 @@
 class Tqsl < Formula
   desc "Tools for digitally signing Amateur Radio QSO records"
   homepage "https://www.arrl.org/tqsl-download"
-  url "https://www.arrl.org/tqsl/tqsl-2.7.1.tar.gz"
-  sha256 "cc51295712567f0cdce051e83657a9c3bd08fc680c0148920d2625fe1a4c6ccc"
+  url "https://www.arrl.org/tqsl/tqsl-2.7.2.tar.gz"
+  sha256 "4f83410944d81d3eae8128358127e34013819ddab04b0c962ebfea9433d018a2"
   license "tqsl"
 
   livecheck do
