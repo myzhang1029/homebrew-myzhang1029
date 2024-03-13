@@ -1,8 +1,8 @@
 class Ndisc6 < Formula
   desc "IPv6 diagnostic tools for Linux and BSD"
   homepage "https://www.remlab.net/ndisc6/"
-  url "https://www.remlab.net/files/ndisc6/ndisc6-1.0.7.tar.bz2"
-  sha256 "edc431d70510d7321a5a39d243de0d0f63846dc9145b3b549c7348cc2bc96609"
+  url "https://www.remlab.net/files/ndisc6/ndisc6-1.0.8.tar.bz2"
+  sha256 "1f2fb2dc1172770aa5a09d39738a44d8b753cc5e2e25e306ca78682f9fea0b4f"
   license "GPL-2.0-or-later"
 
   livecheck do
@@ -90,3 +90,20 @@ index 3276ab1..85f4fa9 100644
  #endif
  	return rc;
  }
+diff --git a/src/ndisc.c b/src/ndisc.c
+index b190b18..93767e0 100644
+--- a/src/ndisc.c
++++ b/src/ndisc.c
+@@ -74,6 +74,12 @@
+ # define AI_IDN 0
+ #endif
+ 
++#ifndef s6_addr32
++# if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)|| defined(__DragonFly__)
++#  define s6_addr32 __u6_addr.__u6_addr32
++# endif
++#endif
++
+ 
+ enum ndisc_flags
+ {
