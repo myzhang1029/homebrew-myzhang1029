@@ -30,8 +30,8 @@ class Sdrplusplus < Formula
 
   def install
     # Install Mako for volk (build dependency)
-    virtualenv_create("deps/mako", without_pip: false)
-    system "#{buildpath}/deps/mako/bin/pip", "install", "mako"
+    venv = virtualenv_create("deps/mako")
+    venv.pip_install ["mako", "setuptools", "markupsafe"] # setuptools is needed for markupsafe in Python 3.12
     # Install volk
     system "git", "clone", "--recursive", "--depth", "1", "https://github.com/gnuradio/volk.git", "deps/volk"
     cd "deps/volk" do
