@@ -163,6 +163,7 @@ class Scopy < Formula
     system "cmake", "--build", "build"
 
     mkdir "build/Scopy.app/Contents/Frameworks"
+    cp "build/iio-emu/iio-emu", "build/Scopy.app/Contents/MacOS/iio-emu"
 
     # Manually rename libqwt before running dylibbundler
     # because it defaults to linking without a dirname
@@ -175,6 +176,7 @@ class Scopy < Formula
     end
 
     system "yes | dylibbundler -of -b -x build/Scopy.app/Contents/MacOS/Scopy -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
+    system "yes | dylibbundler -of -b -x build/Scopy.app/Contents/MacOS/iio-emu -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
     # fix_dylib("build/Scopy.app/Contents/MacOS/Scopy")
 
     # https://gist.github.com/akostadinov/fc688feba7669a4eb784: copy and dereference
@@ -200,11 +202,19 @@ class Scopy < Formula
     MachO::Tools.add_rpath("build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361",
       "@executable_path/../Frameworks")
     MachO::Tools.add_rpath("build/Scopy.app/Contents/MacOS/Scopy", "@executable_path/../Frameworks")
+    MachO::Tools.add_rpath("build/Scopy.app/Contents/MacOS/iio-emu", "@executable_path/../Frameworks")
     Dir.glob("build/Scopy.app/Contents/Frameworks/libgnuradio-iio*").each do |file|
       MachO::Tools.add_rpath(file, "@executable_path/../Frameworks/iio.framework")
       MachO::Tools.add_rpath(file, "@executable_path/../Frameworks/ad9361.framework")
     end
     system "macdeployqt", "build/Scopy.app"
+
+    # Code signing
+    Dir.glob("build/Scopy.app/Contents/**/*.dylib").each do |file|
+      system "codesign", "--force", "-s", "-", file
+    end
+    system "codesign", "--force", "-s", "-", "build/Scopy.app/Contents/MacOS/Scopy"
+    system "codesign", "--force", "-s", "-", "build/Scopy.app/Contents/MacOS/iio-emu"
 
     prefix.install "build/Scopy.app"
   end
