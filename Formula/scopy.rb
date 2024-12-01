@@ -113,6 +113,14 @@ class Scopy < Formula
     system "curl -L '#{script_url}' | python3 - '#{exc}' '#{directory}'"
   end
 
+  def cmake_build_this(dir, *args)
+    cd dir do
+      system "cmake", *args, "-S", ".", "-B", "build", *std_cmake_args
+      system "cmake", "--build", "build"
+      system "cmake", "--install", "build"
+    end
+  end
+
   def install
     # Install Mako for volk (build dependency)
     venv = virtualenv_create("deps/mako")
@@ -126,64 +134,44 @@ class Scopy < Formula
       system "./configure", "--prefix=#{prefix}"
       system "make", "install"
     end
+
     system "git", "clone", "--depth=1", "-b", "v0.26", "--recursive",
-    "https://github.com/analogdevicesinc/libiio.git", "deps/libiio"
-    cd "deps/libiio" do
-      system "cmake", "-DWITH_TESTS:BOOL=OFF", "-DWITH_DOC:BOOL=OFF", "-DHAVE_DNS_SD:BOOL=ON",
-      "-DENABLE_DNS_SD:BOOL=ON", "-DWITH_MATLAB_BINDINGS:BOOL=OFF", "-DCSHARP_BINDINGS:BOOL=OFF",
-      "-DPYTHON_BINDINGS:BOOL=OFF", "-DINSTALL_UDEV_RULE:BOOL=OFF", "-DWITH_SERIAL_BACKEND:BOOL=ON",
-      "-DENABLE_IPV6:BOOL=OFF", "-DOSX_PACKAGE:BOOL=OFF", "-DOSX_INSTALL_FRAMEWORKSDIR:PATH=#{lib}",
-      "-S", ".", "-B", "build", *std_cmake_args
-      system "cmake", "--build", "build"
-      system "cmake", "--install", "build"
-    end
+      "https://github.com/analogdevicesinc/libiio.git", "deps/libiio"
+    cmake_build_this "deps/libiio", "-DWITH_TESTS:BOOL=OFF", "-DWITH_DOC:BOOL=OFF",
+      "-DHAVE_DNS_SD:BOOL=ON", "-DENABLE_DNS_SD:BOOL=ON", "-DWITH_MATLAB_BINDINGS:BOOL=OFF",
+      "-DCSHARP_BINDINGS:BOOL=OFF", "-DPYTHON_BINDINGS:BOOL=OFF", "-DINSTALL_UDEV_RULE:BOOL=OFF",
+      "-DWITH_SERIAL_BACKEND:BOOL=ON", "-DENABLE_IPV6:BOOL=OFF", "-DOSX_PACKAGE:BOOL=OFF",
+      "-DOSX_INSTALL_FRAMEWORKSDIR:PATH=#{lib}"
+
     system "git", "clone", "--depth=1", "-b", "main", "--recursive",
-    "https://github.com/analogdevicesinc/libad9361-iio.git", "deps/libad9361-iio"
-    cd "deps/libad9361-iio" do
-      system "cmake", "-DLIBIIO_INCLUDEDIR=#{lib}/iio.Framework/Headers",
-      "-S", ".", "-B", "build", *std_cmake_args
-      system "cmake", "--build", "build"
-      system "cmake", "--install", "build"
-    end
+      "https://github.com/analogdevicesinc/libad9361-iio.git", "deps/libad9361-iio"
+    cmake_build_this "deps/libad9361-iio", "-DLIBIIO_INCLUDEDIR=#{lib}/iio.Framework/Headers"
+
     system "git", "clone", "--depth=1", "-b", "main", "--recursive",
-"https://github.com/analogdevicesinc/libm2k.git", "deps/libm2k"
-    cd "deps/libm2k" do
-      system "cmake", "-DIIO_INCLUDE_DIRS=#{lib}/iio.Framework/Headers", "-DENABLE_PYTHON=OFF",
-      "-DENABLE_CSHARP=OFF", "-DBUILD_EXAMPLES=OFF", "-DENABLE_TOOLS=OFF", "-DINSTALL_UDEV_RULES=OFF",
-      "-DENABLE_LOG=OFF", "-S", ".", "-B", "build", *std_cmake_args
-      system "cmake", "--build", "build"
-      system "cmake", "--install", "build"
-    end
+      "https://github.com/analogdevicesinc/libm2k.git", "deps/libm2k"
+    cmake_build_this "deps/libm2k", "-DIIO_INCLUDE_DIRS=#{lib}/iio.Framework/Headers",
+      "-DENABLE_PYTHON=OFF", "-DENABLE_CSHARP=OFF", "-DBUILD_EXAMPLES=OFF", "-DENABLE_TOOLS=OFF",
+      "-DINSTALL_UDEV_RULES=OFF", "-DENABLE_LOG=OFF"
+
     system "git", "clone", "--depth=1", "-b", "scopy2-maint-3.10", "--recursive",
-"https://github.com/analogdevicesinc/gnuradio.git", "deps/gnuradio"
-    cd "deps/gnuradio" do
-      system "cmake",
-      "-Dlibiio_INCLUDE_DIR=#{lib}/iio.Framework/Headers",
+      "https://github.com/analogdevicesinc/gnuradio.git", "deps/gnuradio"
+    cmake_build_this "deps/gnuradio", "-Dlibiio_INCLUDE_DIR=#{lib}/iio.Framework/Headers",
       "-Dlibad9361_INCLUDE_DIR=#{include}",
       "-Dlibad9361_LIBRARIES=#{lib}/libad9361-iio.dylib",
       "-DPYTHON_EXECUTABLE=#{buildpath}/deps/mako/bin/python3", "-DENABLE_DEFAULT=OFF",
       "-DENABLE_GNURADIO_RUNTIME=ON", "-DENABLE_GR_ANALOG=ON", "-DENABLE_GR_BLOCKS=ON",
-      "-DENABLE_GR_FFT=ON", "-DENABLE_GR_FILTER=ON", "-DENABLE_GR_IIO=ON", "-DENABLE_POSTINSTALL=OFF",
-      "-S", ".", "-B", "build", *std_cmake_args
-      system "cmake", "--build", "build"
-      system "cmake", "--install", "build"
-    end
+      "-DENABLE_GR_FFT=ON", "-DENABLE_GR_FILTER=ON", "-DENABLE_GR_IIO=ON", "-DENABLE_POSTINSTALL=OFF"
+
     system "git", "clone", "--depth=1", "-b", "3.10", "--recursive",
-"https://github.com/analogdevicesinc/gr-scopy.git", "deps/gr-scopy"
-    cd "deps/gr-scopy" do
-      system "cmake", "-DWITH_PYTHON=OFF", "-S", ".", "-B", "build", *std_cmake_args
-      system "cmake", "--build", "build"
-      system "cmake", "--install", "build"
-    end
+      "https://github.com/analogdevicesinc/gr-scopy.git", "deps/gr-scopy"
+    cmake_build_this "deps/gr-scopy", "-DWITH_PYTHON=OFF"
+
     system "git", "clone", "--depth=1", "-b", "main", "--recursive",
-"https://github.com/analogdevicesinc/gr-m2k.git", "deps/gr-m2k"
-    cd "deps/gr-m2k" do
-      system "cmake", "-DENABLE_PYTHON=OFF", "-DDIGITAL=OFF", "-S", ".", "-B", "build", *std_cmake_args
-      system "cmake", "--build", "build"
-      system "cmake", "--install", "build"
-    end
+      "https://github.com/analogdevicesinc/gr-m2k.git", "deps/gr-m2k"
+    cmake_build_this "deps/gr-m2k", "-DENABLE_PYTHON=OFF", "-DDIGITAL=OFF"
+
     system "git", "clone", "--depth=1", "-b", "qwt-multiaxes-updated", "--recursive",
-    "https://github.com/cseci/qwt.git", "deps/qwt"
+      "https://github.com/cseci/qwt.git", "deps/qwt"
     cd "deps/qwt" do
       inreplace "qwtconfig.pri" do |s|
         s.gsub! "/usr/local/qwt-$$QWT_VERSION-ma", prefix.to_s
@@ -198,7 +186,7 @@ class Scopy < Formula
       system "make", "install"
     end
     system "git", "clone", "--depth=1", "-b", "master", "--recursive",
-"https://github.com/sigrokproject/libsigrokdecode.git", "deps/libsigrokdecode"
+      "https://github.com/sigrokproject/libsigrokdecode.git", "deps/libsigrokdecode"
     cd "deps/libsigrokdecode" do
       system "./autogen.sh"
       system "./configure", "--prefix=#{prefix}"
@@ -206,26 +194,16 @@ class Scopy < Formula
       system "make", "install"
     end
     system "git", "clone", "--depth=1", "-b", "master", "--recursive",
-"https://github.com/analogdevicesinc/libtinyiiod.git", "deps/libtinyiiod"
-    cd "deps/libtinyiiod" do
-      system "cmake", "-S", ".", "-B", "build", "-DBUILD_EXAMPLES=OFF", "-S", ".", "-B", "build", *std_cmake_args
-      system "cmake", "--build", "build"
-      system "cmake", "--install", "build"
-    end
+      "https://github.com/analogdevicesinc/libtinyiiod.git", "deps/libtinyiiod"
+    cmake_build_this "deps/libtinyiiod", "-DBUILD_EXAMPLES=OFF"
+
     system "git", "clone", "--depth=1", "-b", "2.1", "--recursive", "https://github.com/KDAB/KDDockWidgets.git",
-"deps/KDDockWidgets"
-    cd "deps/KDDockWidgets" do
-      system "cmake", "-S", ".", "-B", "build", *std_cmake_args
-      system "cmake", "--build", "build"
-      system "cmake", "--install", "build"
-    end
+      "deps/KDDockWidgets"
+    cmake_build_this "deps/KDDockWidgets"
+
     system "git", "clone", "--depth=1", "-b", "main", "--recursive",
-"https://github.com/analogdevicesinc/iio-emu.git", "deps/iio-emu"
-    cd "deps/iio-emu" do
-      system "cmake", "-S", ".", "-B", "build", *std_cmake_args
-      system "cmake", "--build", "build"
-      system "cmake", "--install", "build"
-    end
+      "https://github.com/analogdevicesinc/iio-emu.git", "deps/iio-emu"
+    cmake_build_this "deps/iio-emu"
 
     # Now since many deps are in prefix, we need to tell pkg-config where to
     # look for them.
@@ -233,25 +211,29 @@ class Scopy < Formula
 
     # Make it link to qwt using absolute path so that dylibbundler can find it
     system "cmake", "-DENABLE_TESTING=OFF", "-DCMAKE_EXE_LINKER_FLAGS=-L#{lib}",
-    "-DCMAKE_MODULE_LINKER_FLAGS=-L#{lib}", "-DCMAKE_SHARED_LINKER_FLAGS=-L#{lib}",
-    "-DCMAKE_LIBRARY_PATH=#{lib}", "-DCMAKE_STAGING_PREFIX=#{prefix}",
-    "-DQWT_LIBRARIES=#{lib}/libqwt.dylib",
-    "-DCMAKE_PREFIX_PATH=#{prefix}:#{lib}/cmake:#{lib}/pkgconfig:#{lib}/cmake/iio:#{lib}/cmake/gnuradio",
-    "-S", ".", "-B", "build", *std_cmake_args
+      "-DCMAKE_MODULE_LINKER_FLAGS=-L#{lib}", "-DCMAKE_SHARED_LINKER_FLAGS=-L#{lib}",
+      "-DCMAKE_LIBRARY_PATH=#{lib}", "-DCMAKE_STAGING_PREFIX=#{prefix}",
+      "-DQWT_LIBRARIES=#{lib}/libqwt.dylib",
+      "-DCMAKE_PREFIX_PATH=#{prefix}:#{lib}/cmake:#{lib}/pkgconfig:#{lib}/cmake/iio:#{lib}/cmake/gnuradio",
+      "-S", ".", "-B", "build", *std_cmake_args
     system "cmake", "--build", "build"
 
     mkdir "build/Scopy.app/Contents/Frameworks"
 
-    # Manually install libqwt before running dylibbundler
+    # Manually rename libqwt before running dylibbundler
     # because it defaults to linking with relative paths
-    libqwtname = `otool -L build/Scopy.app/Contents/MacOS/Scopy | grep libqwt | cut -d " " -f 1`.strip
-    cp "#{lib}/#{libqwtname}", "build/Scopy.app/Contents/Frameworks"
-    MachO::Tools.change_install_name(
-      "build/Scopy.app/Contents/MacOS/Scopy",
-      libqwtname, "@executable_path/../Frameworks/#{libqwtname}"
-    )
+    MachO.open("build/Scopy.app/Contents/MacOS/Scopy") do |macho|
+      dylibs = macho.linked_dylibs
+      libqwt_names = dylibs.select do |lib|
+        lib.include?("libqwt") && Pathname.new(lib).relative?
+      end
+      libqwt_names.each do |lib|
+        newpath = "#{lib}/#{libpath}"
+        macho.change_install_name(lib, newpath)
+      end
+    end
 
-    system "yes | dylibbundler -od -of -b -x build/Scopy.app/Contents/MacOS/Scopy -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
+    system "yes | dylibbundler -of -b -x build/Scopy.app/Contents/MacOS/Scopy -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
 
     # https://gist.github.com/akostadinov/fc688feba7669a4eb784: copy and dereference
     pysrc = Pathname.new("#{HOMEBREW_PREFIX}/Frameworks/Python.framework")
@@ -274,52 +256,60 @@ class Scopy < Formula
     libusbpath = `otool -L build/Scopy.app/Contents/Frameworks/iio.framework/iio | grep libusb | cut -d " " -f 1`.strip
     libusbid = `echo "#{libusbpath}" | rev | cut -d / -f 1 | rev`.strip
     cp libusbpath, "build/Scopy.app/Contents/Frameworks"
+    system "yes | dylibbundler -of -b -x build/Scopy.app/Contents/Frameworks/iio.framework/iio -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
+    system "yes | dylibbundler -of -b -x build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361 -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
 
     iioid = iiorpath.sub("@rpath/", "")
     ad9361id = ad9361rpath.sub("@rpath/", "")
     pythonid = pythonidrpath.sub(%r{/opt/homebrew/opt/[^/]*/Frameworks/}, "")
 
-    MachO::Tools.change_dylib_id(
-      "build/Scopy.app/Contents/Frameworks/iio.framework/iio",
-      "@executable_path/../Frameworks/#{iioid}"
-    )
-    MachO::Tools.change_dylib_id(
-      "build/Scopy.app/Contents/Frameworks/#{iioid}",
-      "@executable_path/../Frameworks/#{iioid}"
-    )
-    MachO::Tools.change_dylib_id(
-      "build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361",
-      "@executable_path/../Frameworks/#{ad9361id}"
-    )
-    MachO::Tools.change_dylib_id(
-      "build/Scopy.app/Contents/Frameworks/#{ad9361id}",
-      "@executable_path/../Frameworks/#{ad9361id}"
-    )
-    MachO::Tools.change_dylib_id(
-      "build/Scopy.app/Contents/Frameworks/#{pythonid}",
-      "@executable_path/../Frameworks/#{pythonid}"
-    )
-    MachO::Tools.change_dylib_id(
-      "build/Scopy.app/Contents/Frameworks/#{libusbid}",
-      "@executable_path/../Frameworks/#{libusbid}"
-    )
+    # MachO::Tools.change_dylib_id(
+    #   "build/Scopy.app/Contents/Frameworks/iio.framework/iio",
+    #   "@executable_path/../Frameworks/#{iioid}",
+    # )
+    # MachO::Tools.change_dylib_id(
+    #   "build/Scopy.app/Contents/Frameworks/#{iioid}",
+    #   "@executable_path/../Frameworks/#{iioid}",
+    # )
+    # MachO::Tools.change_dylib_id(
+    #   "build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361",
+    #   "@executable_path/../Frameworks/#{ad9361id}",
+    # )
+    # MachO::Tools.change_dylib_id(
+    #   "build/Scopy.app/Contents/Frameworks/#{ad9361id}",
+    #   "@executable_path/../Frameworks/#{ad9361id}",
+    # )
+    # MachO::Tools.change_dylib_id(
+    #   "build/Scopy.app/Contents/Frameworks/#{pythonid}",
+    #   "@executable_path/../Frameworks/#{pythonid}",
+    # )
+    # MachO::Tools.change_dylib_id(
+    #   "build/Scopy.app/Contents/Frameworks/#{libusbid}",
+    #   "@executable_path/../Frameworks/#{libusbid}",
+    # )
 
-    MachO::Tools.change_install_name(
-      "build/Scopy.app/Contents/MacOS/Scopy", iiorpath,
-      "@executable_path/../Frameworks/#{iioid}"
-    )
+    MachO.open("build/Scopy.app/Contents/MacOS/Scopy") do |macho|
+      macho.change_install_name(
+        iiorpath, "@executable_path/../Frameworks/#{iioid}"
+      )
+      if macho.linked_dylibs.include?(ad9361rpath)
+        macho.change_install_name(
+          ad9361rpath, "@executable_path/../Frameworks/#{ad9361id}"
+        )
+      end
+    end
     MachO::Tools.change_install_name(
       "build/Scopy.app/Contents/Frameworks/#{ad9361id}", iiorpath,
       "@executable_path/../Frameworks/#{iioid}"
     )
     Dir.glob("build/Scopy.app/Contents/Frameworks/libgnuradio-iio*").each do |file|
-      MachO::Tools.change_install_name(file, iiorpath, "@executable_path/../Frameworks/#{iioid}")
-      # MachO::Tools.change_install_name(file, ad9361rpath, "@executable_path/../Frameworks/#{ad9361id}")
+      MachO.open(file) do |macho|
+        macho.change_install_name(iiorpath, "@executable_path/../Frameworks/#{iioid}")
+        if macho.linked_dylibs.include?(ad9361rpath)
+          macho.change_install_name(ad9361rpath, "@executable_path/../Frameworks/#{ad9361id}")
+        end
+      end
     end
-    # MachO::Tools.change_install_name(
-    #  "build/Scopy.app/Contents/MacOS/Scopy", ad9361rpath,
-    #  "@executable_path/../Frameworks/#{ad9361id}"
-    # )
     Dir.glob("build/Scopy.app/Contents/Frameworks/libsigrokdecode*").each do |file|
       MachO::Tools.change_install_name(file, pythonidrpath, "@executable_path/../Frameworks/#{pythonid}")
     end
@@ -329,8 +319,8 @@ class Scopy < Formula
     )
 
     system "macdeployqt", "build/Scopy.app"
-    run_macdeployqtfix("build/Scopy.app/Contents/MacOS/Scopy", "#{HOMEBREW_PREFIX}/opt/qt/")
-    run_macdeployqtfix("build/Scopy.app/Contents/MacOS/Scopy", "build/Scopy.app/Contents/Frameworks/")
+    # run_macdeployqtfix("build/Scopy.app/Contents/MacOS/Scopy", "#{HOMEBREW_PREFIX}/opt/qt/")
+    # run_macdeployqtfix("build/Scopy.app/Contents/MacOS/Scopy", "build/Scopy.app/Contents/Frameworks/")
 
     prefix.install "build/Scopy.app"
   end
