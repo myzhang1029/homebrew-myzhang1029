@@ -37,88 +37,32 @@ class Scopy < Formula
   # This is an unlisted dependency
   depends_on "webp"
 
-  # https://gist.github.com/akostadinov/05c2a976dc16ffee9cac
-  def find_follow(*paths)
-    block_given? || (return enum_for(__method__, *paths))
-
-    link_cache = {}
-    link_resolve = lambda { |path|
-      # puts "++ link_resolve: #{path}" # trace
-      if link_cache[path]
-        link_cache[path]
-      else
-        link_cache[path] = Pathname.new(path).realpath.to_s
-      end
-    }
-    # this lambda should cleanup `link_cache` from unnecessary entries
-    link_cache_reset = lambda { |path|
-      # puts "++ link_cache_reset: #{path}" # trace
-      # puts link_cache.to_s # trace
-      link_cache.select! do |k, _v|
-        path == k || k == "/" || path.start_with?(k + "/")
-      end
-      # puts link_cache.to_s # trace
-    }
-    link_is_recursive = lambda { |path|
-      # puts "++ link_is_recursive: #{path}" # trace
-      # the ckeck is useless if path is not a link but not our responsibility
-
-      # we need to check full path for link cycles
-      pn_initial = Pathname.new(path)
-      unless pn_initial.absolute?
-        # can we use `expand_path` here? Any issues with links?
-        pn_initial = Pathname.new(File.join(Dir.pwd, path))
-      end
-
-      # clear unnecessary cache
-      link_cache_reset.call(pn_initial.to_s)
-
-      link_dst = link_resolve.call(pn_initial.to_s)
-
-      pn_initial.ascend do |pn|
-        return { link: path, dst: pn } if pn != pn_initial && link_dst == link_resolve.call(pn.to_s)
-      end
-
-      false
-    }
-
-    do_find = proc { |path|
-      Find.find(path) do |path|
-        if File.symlink?(path) && File.directory?(File.realpath(path))
-          if path[-1] == "/"
-            # probably hitting https://github.com/jruby/jruby/issues/1895
-            yield(path.dup)
-            Dir.new(path).each do |subpath|
-              do_find.call(path + subpath) unless [".", ".."].include?(subpath)
-            end
-          elsif (is_recursive = link_is_recursive.call(path))
-            raise "cannot handle recursive links: #{is_recursive[:link]} => #{is_recursive[:dst]}"
-          else
-            do_find.call(path + "/")
-          end
-        else
-          yield(path)
-        end
-      end
-    }
-
-    while (path = paths.shift)
-      do_find.call(path)
-    end
-  end
-
-  def run_macdeployqtfix(exc, directory)
-    script_url = "https://raw.githubusercontent.com/aurelien-rainone/macdeployqtfix/master/macdeployqtfix.py"
-
-    system "curl -L '#{script_url}' | python3 - '#{exc}' '#{directory}'"
-  end
-
   def cmake_build_this(dir, *args)
     cd dir do
       system "cmake", *args, "-S", ".", "-B", "build", *std_cmake_args
       system "cmake", "--build", "build"
       system "cmake", "--install", "build"
     end
+  end
+
+  # Instead of using dylibbundler, we use our own script to copy and dereference
+  # all the dylibs.
+  def fix_dylib(dylib)
+    dylibs = MachO::Tools.dylibs(dylib).select do |libpath|
+      libpath.start_with?(lib) || (libpath.start_with?("/") && !libpath.start_with?("/usr/lib") && !libpath.start_with?("/System/Library"))
+    end
+    dylibs.each do |libpath|
+      basename = Pathname.new(libpath).basename
+      newpath = if libpath.start_with?(lib)
+        libpath.sub("#{lib}/", "@rpath/")
+      else
+        "@rpath/#{basename}"
+      end
+      MachO::Tools.change_install_name(dylib, libpath, newpath)
+      cp libpath, "build/Scopy.app/Contents/Frameworks"
+      fix_dylib("build/Scopy.app/Contents/Frameworks/#{basename}")
+    end
+    MachO::Tools.add_rpath(dylib, "@executable_path/../Frameworks")
   end
 
   def install
@@ -221,106 +165,46 @@ class Scopy < Formula
     mkdir "build/Scopy.app/Contents/Frameworks"
 
     # Manually rename libqwt before running dylibbundler
-    # because it defaults to linking with relative paths
-    MachO.open("build/Scopy.app/Contents/MacOS/Scopy") do |macho|
-      dylibs = macho.linked_dylibs
-      libqwt_names = dylibs.select do |lib|
-        lib.include?("libqwt") && Pathname.new(lib).relative?
-      end
-      libqwt_names.each do |lib|
-        newpath = "#{lib}/#{libpath}"
-        macho.change_install_name(lib, newpath)
-      end
+    # because it defaults to linking without a dirname
+    libqwt_names = MachO::Tools.dylibs("build/Scopy.app/Contents/MacOS/Scopy").select do |lib|
+      lib.include?("libqwt") && Pathname.new(lib).relative?
+    end
+    libqwt_names.each do |libpath|
+      newpath = "#{lib}/#{libpath}"
+      MachO::Tools.change_install_name("build/Scopy.app/Contents/MacOS/Scopy", libpath, newpath)
     end
 
     system "yes | dylibbundler -of -b -x build/Scopy.app/Contents/MacOS/Scopy -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
+    # fix_dylib("build/Scopy.app/Contents/MacOS/Scopy")
 
     # https://gist.github.com/akostadinov/fc688feba7669a4eb784: copy and dereference
-    pysrc = Pathname.new("#{HOMEBREW_PREFIX}/Frameworks/Python.framework")
+    pycurrentversion = Pathname.new("#{HOMEBREW_PREFIX}/Frameworks/Python.framework/Versions").children.select do |path|
+      path.basename != Pathname.new("Current")
+    end.max.basename.to_s
     pydst = "build/Scopy.app/Contents/Frameworks/Python.framework"
-    mkdir_p(pydst)
-    find_follow(pysrc) do |path|
-      relpath = Pathname.new(path).relative_path_from(pysrc).to_s
-      dstpath = File.join(pydst, relpath)
-      if File.directory?(path) || (File.symlink?(path) && File.directory?(File.realpath(path)))
-        mkdir_p(dstpath)
-      else
-        copy_file(path, dstpath)
-      end
-    end
+    mkdir_p "#{pydst}/Versions"
+    cp_r "#{HOMEBREW_PREFIX}/Frameworks/Python.framework/Versions/#{pycurrentversion}", "#{pydst}/Versions/#{pycurrentversion}"
+    ln_s pycurrentversion.to_s, "#{pydst}/Versions/Current"
+    ln_s "Versions/Current/Python", "#{pydst}/Python"
+    ln_s "Versions/Current/Resources", "#{pydst}/Resources"
+    ln_s "Versions/Current/Headers", "#{pydst}/Headers"
+
     cp_r "#{lib}/iio.Framework", "build/Scopy.app/Contents/Frameworks"
     cp_r "deps/libad9361-iio/build/ad9361.framework", "build/Scopy.app/Contents/Frameworks"
-    iiorpath = `otool -D build/Scopy.app/Contents/Frameworks/iio.framework/iio | grep @rpath`.strip
-    ad9361rpath = `otool -D build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361 | grep @rpath`.strip
-    pythonidrpath = `otool -D build/Scopy.app/Contents/Frameworks/Python.framework/Versions/Current/Python | head -2 |  tail -1`.strip
-    libusbpath = `otool -L build/Scopy.app/Contents/Frameworks/iio.framework/iio | grep libusb | cut -d " " -f 1`.strip
-    libusbid = `echo "#{libusbpath}" | rev | cut -d / -f 1 | rev`.strip
-    cp libusbpath, "build/Scopy.app/Contents/Frameworks"
+    #fix_dylib("build/Scopy.app/Contents/Frameworks/iio.framework/iio")
     system "yes | dylibbundler -of -b -x build/Scopy.app/Contents/Frameworks/iio.framework/iio -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
+    #fix_dylib("build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361")
     system "yes | dylibbundler -of -b -x build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361 -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
 
-    iioid = iiorpath.sub("@rpath/", "")
-    ad9361id = ad9361rpath.sub("@rpath/", "")
-    pythonid = pythonidrpath.sub(%r{/opt/homebrew/opt/[^/]*/Frameworks/}, "")
-
-    # MachO::Tools.change_dylib_id(
-    #   "build/Scopy.app/Contents/Frameworks/iio.framework/iio",
-    #   "@executable_path/../Frameworks/#{iioid}",
-    # )
-    # MachO::Tools.change_dylib_id(
-    #   "build/Scopy.app/Contents/Frameworks/#{iioid}",
-    #   "@executable_path/../Frameworks/#{iioid}",
-    # )
-    # MachO::Tools.change_dylib_id(
-    #   "build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361",
-    #   "@executable_path/../Frameworks/#{ad9361id}",
-    # )
-    # MachO::Tools.change_dylib_id(
-    #   "build/Scopy.app/Contents/Frameworks/#{ad9361id}",
-    #   "@executable_path/../Frameworks/#{ad9361id}",
-    # )
-    # MachO::Tools.change_dylib_id(
-    #   "build/Scopy.app/Contents/Frameworks/#{pythonid}",
-    #   "@executable_path/../Frameworks/#{pythonid}",
-    # )
-    # MachO::Tools.change_dylib_id(
-    #   "build/Scopy.app/Contents/Frameworks/#{libusbid}",
-    #   "@executable_path/../Frameworks/#{libusbid}",
-    # )
-
-    MachO.open("build/Scopy.app/Contents/MacOS/Scopy") do |macho|
-      macho.change_install_name(
-        iiorpath, "@executable_path/../Frameworks/#{iioid}"
-      )
-      if macho.linked_dylibs.include?(ad9361rpath)
-        macho.change_install_name(
-          ad9361rpath, "@executable_path/../Frameworks/#{ad9361id}"
-        )
-      end
-    end
-    MachO::Tools.change_install_name(
-      "build/Scopy.app/Contents/Frameworks/#{ad9361id}", iiorpath,
-      "@executable_path/../Frameworks/#{iioid}"
-    )
+    MachO::Tools.add_rpath("build/Scopy.app/Contents/Frameworks/iio.framework/iio", "@executable_path/../Frameworks")
+    MachO::Tools.add_rpath("build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361",
+      "@executable_path/../Frameworks")
+    MachO::Tools.add_rpath("build/Scopy.app/Contents/MacOS/Scopy", "@executable_path/../Frameworks")
     Dir.glob("build/Scopy.app/Contents/Frameworks/libgnuradio-iio*").each do |file|
-      MachO.open(file) do |macho|
-        macho.change_install_name(iiorpath, "@executable_path/../Frameworks/#{iioid}")
-        if macho.linked_dylibs.include?(ad9361rpath)
-          macho.change_install_name(ad9361rpath, "@executable_path/../Frameworks/#{ad9361id}")
-        end
-      end
+      MachO::Tools.add_rpath(file, "@executable_path/../Frameworks/iio.framework")
+      MachO::Tools.add_rpath(file, "@executable_path/../Frameworks/ad9361.framework")
     end
-    Dir.glob("build/Scopy.app/Contents/Frameworks/libsigrokdecode*").each do |file|
-      MachO::Tools.change_install_name(file, pythonidrpath, "@executable_path/../Frameworks/#{pythonid}")
-    end
-    MachO::Tools.change_install_name(
-      "build/Scopy.app/Contents/Frameworks/iio.framework/iio", libusbpath,
-      "@executable_path/../Frameworks/#{libusbid}"
-    )
-
     system "macdeployqt", "build/Scopy.app"
-    # run_macdeployqtfix("build/Scopy.app/Contents/MacOS/Scopy", "#{HOMEBREW_PREFIX}/opt/qt/")
-    # run_macdeployqtfix("build/Scopy.app/Contents/MacOS/Scopy", "build/Scopy.app/Contents/Frameworks/")
 
     prefix.install "build/Scopy.app"
   end
