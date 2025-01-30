@@ -22,6 +22,8 @@ class Radvd < Formula
   def install
     system "./autogen.sh" if build.head?
     system "./configure", *std_configure_args, "--disable-silent-rules"
+    mkdir_p "bsd"
+    touch "bsd/string.h"
     system "make", "install"
   end
 
