@@ -1,8 +1,8 @@
 class Radvd < Formula
   desc "IPv6 Router Advertisement Daemon"
   homepage "https://radvd.litech.org/"
-  url "https://github.com/radvd-project/radvd/releases/download/v2.19/radvd-2.19.tar.xz"
-  sha256 "564e04597f71a9057d02290da0dd21b592d277ceb0e7277550991d788213e240"
+  url "https://github.com/radvd-project/radvd/releases/download/v2.20/radvd-2.20.tar.xz"
+  sha256 "25d2960fb977ac35c45a8d85b71db22ed8af325db7dbf4a562fb03eab2848dcd"
   license "NOASSERTION"
 
   livecheck do

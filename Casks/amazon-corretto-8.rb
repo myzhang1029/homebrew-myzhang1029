@@ -1,6 +1,6 @@
 cask "amazon-corretto-8" do
-  version "8.422.05.1"
-  sha256 "45fe10295e65f70d6ec46e3441509737d17e45d198c1f6b00b365367a3983909"
+  version "8.442.06.1"
+  sha256 "119d5b91de9cfb959a4a872914a274e43db321fc4df75f0a0f9f6fed516c5143"
 
   url "https://corretto.aws/downloads/resources/#{version}/amazon-corretto-#{version}-macosx-aarch64.pkg"
   name "amazon-corretto-8"

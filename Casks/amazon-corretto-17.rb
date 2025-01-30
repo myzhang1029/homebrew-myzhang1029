@@ -1,14 +1,14 @@
-cask "amazon-corretto-11" do
-  version "11.0.26.4.1"
-  sha256 "cede642e444e10c50b0834b1dc2388c14e17198caf2a6ee204ee6316d8c506a6"
+cask "amazon-corretto-17" do
+  version "17.0.14.7.1"
+  sha256 "e168900460d2bb6c887d3a9e90918f2d2568d58e4da17cb208318176c804cc1f"
 
   url "https://corretto.aws/downloads/resources/#{version}/amazon-corretto-#{version}-macosx-aarch64.pkg"
   name "amazon-corretto-11"
-  desc "OpenJDK distribution from Amazon, version 11"
+  desc "OpenJDK distribution from Amazon, version 17"
   homepage "https://corretto.aws/"
 
   livecheck do
-    url "https://github.com/corretto/corretto-11"
+    url "https://github.com/corretto/corretto-17"
     regex(/^v?(\d+(?:\.\d+)+)$/i)
     strategy :github_latest do |json, regex|
       match = json["tag_name"]&.match(regex)
