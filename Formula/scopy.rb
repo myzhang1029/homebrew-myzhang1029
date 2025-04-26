@@ -48,21 +48,36 @@ class Scopy < Formula
   # Instead of using dylibbundler, we use our own script to copy and dereference
   # all the dylibs.
   def fix_dylib(dylib)
+    frameworkbase = Pathname.new("build/Scopy.app/Contents/Frameworks")
+    chmod "u+w", dylib
     dylibs = MachO::Tools.dylibs(dylib).select do |libpath|
-      libpath.start_with?(lib) || (libpath.start_with?("/") && !libpath.start_with?("/usr/lib") && !libpath.start_with?("/System/Library"))
+      # Do not copy macOS system libraries, but always copy any Homebrew libraries
+      libpath.start_with?(HOMEBREW_PREFIX) || (libpath.start_with?("/") && !libpath.start_with?("/usr/lib") && !libpath.start_with?("/System/Library"))
     end
-    dylibs.each do |libpath|
-      basename = Pathname.new(libpath).basename
-      newpath = if libpath.start_with?(lib)
-        libpath.sub("#{lib}/", "@rpath/")
+    dylibs.each do |libpathstr|
+      libpath = Pathname.new(libpathstr)
+      if libpathstr.include?(".framework")
+        # Find the first parent directory that ends with .framework
+        frameworkpath = libpath
+        frameworkpath = frameworkpath.parent until frameworkpath.basename.to_s.end_with?(".framework")
+        frameworkname = frameworkpath.basename
+        # Copy the framework to the destination if it doesn't exist
+        dest = frameworkbase + frameworkname
+        cp_r frameworkpath, frameworkbase unless dest.exist?
+        # Find the relative path from the rpath to the dylib
+        relative_path = frameworkname + libpath.relative_path_from(frameworkpath)
+        newpath = "@executable_path/../Frameworks/#{relative_path}"
+        MachO::Tools.change_install_name(dylib, libpath.to_s, newpath)
+        fix_dylib(frameworkbase + relative_path)
       else
-        "@rpath/#{basename}"
+        basename = libpath.basename
+        dest = frameworkbase + basename
+        cp libpath, frameworkbase unless dest.exist?
+        newpath = "@executable_path/../Frameworks/#{basename}"
+        MachO::Tools.change_install_name(dylib, libpath.to_s, newpath)
+        fix_dylib(frameworkbase + basename)
       end
-      MachO::Tools.change_install_name(dylib, libpath, newpath)
-      cp libpath, "build/Scopy.app/Contents/Frameworks"
-      fix_dylib("build/Scopy.app/Contents/Frameworks/#{basename}")
     end
-    MachO::Tools.add_rpath(dylib, "@executable_path/../Frameworks")
   end
 
   def install
@@ -157,13 +172,13 @@ class Scopy < Formula
     system "cmake", "-DENABLE_TESTING=OFF", "-DCMAKE_EXE_LINKER_FLAGS=-L#{lib}",
       "-DCMAKE_MODULE_LINKER_FLAGS=-L#{lib}", "-DCMAKE_SHARED_LINKER_FLAGS=-L#{lib}",
       "-DCMAKE_LIBRARY_PATH=#{lib}", "-DCMAKE_STAGING_PREFIX=#{prefix}",
-      "-DQWT_LIBRARIES=#{lib}/libqwt.dylib",
+      "-DQWT_LIBRARIES=#{lib}/libqwt.dylib", "-DIIO_INCLUDE_DIRS=#{lib}/iio.Framework/Headers",
       "-DCMAKE_PREFIX_PATH=#{prefix}:#{lib}/cmake:#{lib}/pkgconfig:#{lib}/cmake/iio:#{lib}/cmake/gnuradio",
       "-S", ".", "-B", "build", *std_cmake_args
     system "cmake", "--build", "build"
 
     mkdir "build/Scopy.app/Contents/Frameworks"
-    cp "build/iio-emu/iio-emu", "build/Scopy.app/Contents/MacOS/iio-emu"
+    cp "deps/iio-emu/build/iio-emu", "build/Scopy.app/Contents/MacOS/iio-emu"
 
     # Manually rename libqwt before running dylibbundler
     # because it defaults to linking without a dirname
@@ -175,37 +190,43 @@ class Scopy < Formula
       MachO::Tools.change_install_name("build/Scopy.app/Contents/MacOS/Scopy", libpath, newpath)
     end
 
-    system "yes | dylibbundler -of -b -x build/Scopy.app/Contents/MacOS/Scopy -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
-    system "yes | dylibbundler -of -b -x build/Scopy.app/Contents/MacOS/iio-emu -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
-    # fix_dylib("build/Scopy.app/Contents/MacOS/Scopy")
+    fix_dylib("build/Scopy.app/Contents/MacOS/Scopy")
+    fix_dylib("build/Scopy.app/Contents/MacOS/iio-emu")
+    Dir.glob("build/Scopy.app/Contents/MacOS/plugins/*.dylib").each do |file|
+      fix_dylib(file)
+    end
+
+    frameworkbase = Pathname.new("build/Scopy.app/Contents/Frameworks")
 
     # https://gist.github.com/akostadinov/fc688feba7669a4eb784: copy and dereference
-    pycurrentversion = Pathname.new("#{HOMEBREW_PREFIX}/Frameworks/Python.framework/Versions").children.select do |path|
-      path.basename != Pathname.new("Current")
-    end.max.basename.to_s
-    pydst = "build/Scopy.app/Contents/Frameworks/Python.framework"
-    mkdir_p "#{pydst}/Versions"
-    cp_r "#{HOMEBREW_PREFIX}/Frameworks/Python.framework/Versions/#{pycurrentversion}", "#{pydst}/Versions/#{pycurrentversion}"
-    ln_s pycurrentversion.to_s, "#{pydst}/Versions/Current"
-    ln_s "Versions/Current/Python", "#{pydst}/Python"
-    ln_s "Versions/Current/Resources", "#{pydst}/Resources"
-    ln_s "Versions/Current/Headers", "#{pydst}/Headers"
+    pycurrentversion = Pathname.new("#{HOMEBREW_PREFIX}/Frameworks/Python.framework/Versions").children.reject do |path|
+      path.basename == Pathname.new("Current")
+    end.max.basename
 
-    cp_r "#{lib}/iio.Framework", "build/Scopy.app/Contents/Frameworks"
-    cp_r "deps/libad9361-iio/build/ad9361.framework", "build/Scopy.app/Contents/Frameworks"
-    #fix_dylib("build/Scopy.app/Contents/Frameworks/iio.framework/iio")
-    system "yes | dylibbundler -of -b -x build/Scopy.app/Contents/Frameworks/iio.framework/iio -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
-    #fix_dylib("build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361")
-    system "yes | dylibbundler -of -b -x build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361 -d build/Scopy.app/Contents/Frameworks/ -p @executable_path/../Frameworks/ -s #{lib}"
+    pydst = frameworkbase + "Python.framework"
 
-    MachO::Tools.add_rpath("build/Scopy.app/Contents/Frameworks/iio.framework/iio", "@executable_path/../Frameworks")
-    MachO::Tools.add_rpath("build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361",
-      "@executable_path/../Frameworks")
-    MachO::Tools.add_rpath("build/Scopy.app/Contents/MacOS/Scopy", "@executable_path/../Frameworks")
-    MachO::Tools.add_rpath("build/Scopy.app/Contents/MacOS/iio-emu", "@executable_path/../Frameworks")
-    Dir.glob("build/Scopy.app/Contents/Frameworks/libgnuradio-iio*").each do |file|
-      MachO::Tools.add_rpath(file, "@executable_path/../Frameworks/iio.framework")
-      MachO::Tools.add_rpath(file, "@executable_path/../Frameworks/ad9361.framework")
+    mkdir_p pydst + "Versions"
+    cp_r "#{HOMEBREW_PREFIX}/Frameworks/Python.framework/Versions/#{pycurrentversion}",
+pydst + "Versions" + pycurrentversion
+    ln_s pycurrentversion, "#{pydst}/Versions/Current" unless (pydst + "Versions/Current").exist?
+    ln_s "Versions/Current/Python", "#{pydst}/Python" unless (pydst + "Python").exist?
+    ln_s "Versions/Current/Resources", "#{pydst}/Resources" unless (pydst + "Resources").exist?
+    ln_s "Versions/Current/Headers", "#{pydst}/Headers" unless (pydst + "Headers").exist?
+
+    cp_r "#{lib}/iio.Framework", frameworkbase unless (frameworkbase + "iio.Framework").exist?
+    cp_r "deps/libad9361-iio/build/ad9361.framework", frameworkbase unless (frameworkbase + "ad9361.framework").exist?
+    fix_dylib("build/Scopy.app/Contents/Frameworks/iio.framework/iio")
+    fix_dylib("build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361")
+
+    Dir.glob(frameworkbase + "libgnuradio-iio*").each do |file|
+      begin
+        MachO::Tools.add_rpath(file, "@executable_path/../Frameworks/iio.framework")
+      rescue MachO::RpathExistsError
+      end
+      begin
+        MachO::Tools.add_rpath(file, "@executable_path/../Frameworks/ad9361.framework")
+      rescue MachO::RpathExistsError
+      end
     end
     system "macdeployqt", "build/Scopy.app"
 
@@ -213,7 +234,12 @@ class Scopy < Formula
     Dir.glob("build/Scopy.app/Contents/**/*.dylib").each do |file|
       system "codesign", "--force", "-s", "-", file
     end
-    system "codesign", "--force", "-s", "-", "build/Scopy.app/Contents/MacOS/Scopy"
+    # Ignore error for this one
+    begin
+      system "codesign", "--force", "-s", "-", "build/Scopy.app/Contents/MacOS/Scopy"
+    rescue
+      nil
+    end
     system "codesign", "--force", "-s", "-", "build/Scopy.app/Contents/MacOS/iio-emu"
 
     prefix.install "build/Scopy.app"
