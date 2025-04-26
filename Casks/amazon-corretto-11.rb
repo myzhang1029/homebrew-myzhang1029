@@ -1,6 +1,6 @@
 cask "amazon-corretto-11" do
-  version "11.0.26.4.1"
-  sha256 "cede642e444e10c50b0834b1dc2388c14e17198caf2a6ee204ee6316d8c506a6"
+  version "11.0.27.6.1"
+  sha256 "fcf184611f98e303c53e4c942b8742d5cff01e6cb9c7876011e6b12651a0062a"
 
   url "https://corretto.aws/downloads/resources/#{version}/amazon-corretto-#{version}-macosx-aarch64.pkg"
   name "amazon-corretto-11"
