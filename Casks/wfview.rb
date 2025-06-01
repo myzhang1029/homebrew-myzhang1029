@@ -1,9 +1,9 @@
 cask "wfview" do
-  version "2.03"
-  sha256 "d7b749632d4db87e43f56111818c446b0a1532f3bf4a61c0a4fe20b3fa5d7cf6"
+  version "2.11"
+  sha256 "fd5b89d9eea1a70c80691894284df5ee4f2a85da5bbc7f46e5cf5bb83832cc6d"
 
   version_for_url = version.tr(".", "-")
-  url "https://wfview.org/download/macos-universal-v#{version_for_url}/?wpdmdl=1417&refresh=679bbd286f5321738259752"
+  url "https://wfview.org/download/macos-universal-v#{version_for_url}/?wpdmdl=1594&refresh=683a1570d13ea1748637040"
   name "wfview"
   desc "Open Source interface for Icom and Kenwood transceivers"
   homepage "https://wfview.org/"
