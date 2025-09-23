@@ -18,6 +18,9 @@ cask "amazon-corretto-17" do
     end
   end
 
+  deprecate! date:    "2025-09-22",
+             because: "Upstream corretto@17"
+
   pkg "amazon-corretto-#{version}-macosx-aarch64.pkg"
 
   uninstall pkgutil: "com.amazon.corretto.#{version.major}"
