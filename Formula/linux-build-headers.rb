@@ -1,6 +1,8 @@
 class LinuxBuildHeaders < Formula
+  # To be used with HOST_EXTRACFLAGS=-I/opt/homebrew/opt/linux-build-headers/include make LLVM=1
   desc "Header files for building the Linux kernel"
   homepage "https://sourceware.org/glibc"
+  keg_only "Avoid conflict with macOS headers"
   url "https://example.com/index.html"
   version "2.42"
   license "GPL-2.1-only"
@@ -18,7 +20,7 @@ class LinuxBuildHeaders < Formula
     mkdir_p "#{include}/posix/bits"
     get_file "elf/elf.h", "elf.h"
     get_file "bits/byteswap.h", "bits/byteswap.h"
-    get_file "bits/endian.h", "bits/endian.h"
+    get_file "string/bits/endian.h", "bits/endian.h"
     get_file "sysdeps/#{arch}/bits/endianness.h", "bits/endianness.h"
     get_file "bits/time64.h", "bits/time64.h"
     get_file "bits/timesize.h", "bits/timesize.h"
@@ -33,6 +35,8 @@ class LinuxBuildHeaders < Formula
     get_file "include/gnu/stubs.h", "gnu/stubs.h"
     get_file "posix/bits/types.h", "posix/bits/types.h"
     get_file "include/stdc-predef.h", "stdc-predef.h"
+    # Resolve duplicate __int64_t definitions
+    system "sed", "-i.bak", "s/typedef signed long int __int64_t//;s/typedef unsigned long int __uint64_t//", "#{include}/posix/bits/types.h"
   end
 
   test do
