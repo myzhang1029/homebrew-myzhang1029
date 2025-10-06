@@ -3,7 +3,7 @@ class Radvd < Formula
   homepage "https://radvd.litech.org/"
   url "https://github.com/radvd-project/radvd/releases/download/v2.20/radvd-2.20.tar.xz"
   sha256 "25d2960fb977ac35c45a8d85b71db22ed8af325db7dbf4a562fb03eab2848dcd"
-  license "NOASSERTION"
+  license "radvd"
 
   livecheck do
     url :stable
