@@ -7,7 +7,6 @@ class Radvd < Formula
 
   livecheck do
     url :stable
-    regex(/^v?(\d+(?:\.\d+)+)$/i)
     strategy :github_latest
   end
 
@@ -24,7 +23,7 @@ class Radvd < Formula
 
   def install
     system "./autogen.sh" if build.head?
-    system "./configure", *std_configure_args, "--disable-silent-rules"
+    system "./configure", "--disable-silent-rules", *std_configure_args
     system "make", "install"
   end
 
