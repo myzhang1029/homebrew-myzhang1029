@@ -5,19 +5,16 @@ class Radvd < Formula
   sha256 "25d2960fb977ac35c45a8d85b71db22ed8af325db7dbf4a562fb03eab2848dcd"
   license "radvd"
 
-  livecheck do
-    url :stable
-    strategy :github_latest
-  end
-
   head do
     url "https://github.com/radvd-project/radvd.git", branch: "master"
+
     depends_on "autoconf" => :build
     depends_on "automake" => :build
   end
 
   depends_on "pkgconf" => :build
   depends_on "libbsd"
+
   uses_from_macos "bison" => :build
   uses_from_macos "flex" => :build
 
