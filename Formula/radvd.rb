@@ -17,13 +17,14 @@ class Radvd < Formula
     depends_on "automake" => :build
   end
 
+  depends_on "pkgconf" => :build
+  depends_on "libbsd"
   uses_from_macos "bison" => :build
+  uses_from_macos "flex" => :build
 
   def install
     system "./autogen.sh" if build.head?
     system "./configure", *std_configure_args, "--disable-silent-rules"
-    mkdir_p "bsd"
-    touch "bsd/string.h"
     system "make", "install"
   end
 
