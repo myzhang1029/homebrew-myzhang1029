@@ -19,7 +19,7 @@ cask "amazon-corretto-11" do
   end
 
   deprecate! date:    "2025-09-22",
-             because: "Upstream corretto@11"
+             because: "is replaced by homebrew/cask/corretto@11"
 
   pkg "amazon-corretto-#{version}-macosx-aarch64.pkg"
 
