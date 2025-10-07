@@ -12,6 +12,9 @@ class Radvd < Formula
     depends_on "automake" => :build
   end
 
+  deprecate! date:    "2025-10-07",
+             because: "is upstreamed into homebrew/core#247122"
+
   depends_on "pkgconf" => :build
   depends_on "libbsd"
 
