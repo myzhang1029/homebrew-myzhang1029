@@ -14,12 +14,11 @@ class Scopy < Formula
   depends_on "automake" => :build
   depends_on "bison" => :build
   depends_on "cmake" => :build
-  depends_on "dylibbundler" => :build
   depends_on "gnu-sed" => :build
   depends_on "libtool" => :build
   depends_on "pkgconf" => :build
   depends_on "wget" => :build
-  depends_on "boost"
+  depends_on "boost@1.85"
   depends_on "doxygen"
   depends_on "fftw"
   depends_on "gettext"
@@ -96,21 +95,22 @@ class Scopy < Formula
 
     system "git", "clone", "--depth=1", "-b", "v0.26", "--recursive",
       "https://github.com/analogdevicesinc/libiio.git", "deps/libiio"
-    cmake_build_this "deps/libiio", "-DWITH_TESTS:BOOL=OFF", "-DWITH_DOC:BOOL=OFF",
-      "-DHAVE_DNS_SD:BOOL=ON", "-DENABLE_DNS_SD:BOOL=ON", "-DWITH_MATLAB_BINDINGS:BOOL=OFF",
-      "-DCSHARP_BINDINGS:BOOL=OFF", "-DPYTHON_BINDINGS:BOOL=OFF", "-DINSTALL_UDEV_RULE:BOOL=OFF",
-      "-DWITH_SERIAL_BACKEND:BOOL=ON", "-DENABLE_IPV6:BOOL=OFF", "-DOSX_PACKAGE:BOOL=OFF",
-      "-DOSX_INSTALL_FRAMEWORKSDIR:PATH=#{lib}"
+    cmake_build_this "deps/libiio", "-DWITH_TESTS=OFF", "-DWITH_DOC=OFF",
+      "-DHAVE_DNS_SD=ON", "-DENABLE_DNS_SD=ON", "-DWITH_MATLAB_BINDINGS=OFF",
+      "-DCSHARP_BINDINGS=OFF", "-DPYTHON_BINDINGS=OFF", "-DINSTALL_UDEV_RULE=OFF",
+      "-DWITH_SERIAL_BACKEND=ON", "-DENABLE_IPV6=OFF", "-DOSX_PACKAGE=OFF",
+      "-DOSX_INSTALL_FRAMEWORKSDIR=#{lib}"
 
     system "git", "clone", "--depth=1", "-b", "main", "--recursive",
       "https://github.com/analogdevicesinc/libad9361-iio.git", "deps/libad9361-iio"
-    cmake_build_this "deps/libad9361-iio", "-DLIBIIO_INCLUDEDIR=#{lib}/iio.Framework/Headers"
+    cmake_build_this "deps/libad9361-iio", "-DLIBIIO_INCLUDEDIR=#{lib}/iio.Framework/Headers",
+      "-DCMAKE_POLICY_VERSION_MINIMUM=3.5", "-DOSX_PACKAGE=OFF", "-DOSX_FRAMEWORK=OFF"
 
     system "git", "clone", "--depth=1", "-b", "main", "--recursive",
       "https://github.com/analogdevicesinc/libm2k.git", "deps/libm2k"
     cmake_build_this "deps/libm2k", "-DIIO_INCLUDE_DIRS=#{lib}/iio.Framework/Headers",
       "-DENABLE_PYTHON=OFF", "-DENABLE_CSHARP=OFF", "-DBUILD_EXAMPLES=OFF", "-DENABLE_TOOLS=OFF",
-      "-DINSTALL_UDEV_RULES=OFF", "-DENABLE_LOG=OFF"
+      "-DINSTALL_UDEV_RULES=OFF", "-DENABLE_LOG=OFF", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 
     system "git", "clone", "--depth=1", "-b", "scopy2-maint-3.10", "--recursive",
       "https://github.com/analogdevicesinc/gnuradio.git", "deps/gnuradio"
@@ -154,15 +154,23 @@ class Scopy < Formula
     end
     system "git", "clone", "--depth=1", "-b", "master", "--recursive",
       "https://github.com/analogdevicesinc/libtinyiiod.git", "deps/libtinyiiod"
-    cmake_build_this "deps/libtinyiiod", "-DBUILD_EXAMPLES=OFF"
+    cmake_build_this "deps/libtinyiiod", "-DBUILD_EXAMPLES=OFF", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 
     system "git", "clone", "--depth=1", "-b", "2.1", "--recursive", "https://github.com/KDAB/KDDockWidgets.git",
       "deps/KDDockWidgets"
     cmake_build_this "deps/KDDockWidgets"
 
+    system "git", "clone", "--depth=1", "-b", "kf5", "--recursive", "https://github.com/KDE/extra-cmake-modules.git",
+      "deps/ECM"
+    cmake_build_this "deps/ECM"
+
+    system "git", "clone", "--depth=1", "-b", "kf5", "--recursive", "https://github.com/KDE/karchive.git",
+      "deps/karchive"
+    cmake_build_this "deps/karchive"
+
     system "git", "clone", "--depth=1", "-b", "main", "--recursive",
       "https://github.com/analogdevicesinc/iio-emu.git", "deps/iio-emu"
-    cmake_build_this "deps/iio-emu"
+    cmake_build_this "deps/iio-emu", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 
     # Now since many deps are in prefix, we need to tell pkg-config where to
     # look for them.
@@ -214,33 +222,25 @@ pydst + "Versions" + pycurrentversion
     ln_s "Versions/Current/Headers", "#{pydst}/Headers" unless (pydst + "Headers").exist?
 
     cp_r "#{lib}/iio.Framework", frameworkbase unless (frameworkbase + "iio.Framework").exist?
-    cp_r "deps/libad9361-iio/build/ad9361.framework", frameworkbase unless (frameworkbase + "ad9361.framework").exist?
     fix_dylib("build/Scopy.app/Contents/Frameworks/iio.framework/iio")
-    fix_dylib("build/Scopy.app/Contents/Frameworks/ad9361.framework/ad9361")
 
     Dir.glob(frameworkbase + "libgnuradio-iio*").each do |file|
-      begin
         MachO::Tools.add_rpath(file, "@executable_path/../Frameworks/iio.framework")
-      rescue MachO::RpathExistsError
-      end
-      begin
-        MachO::Tools.add_rpath(file, "@executable_path/../Frameworks/ad9361.framework")
-      rescue MachO::RpathExistsError
-      end
+    rescue MachO::RpathExistsError
     end
     system "macdeployqt", "build/Scopy.app"
 
     # Code signing
-    Dir.glob("build/Scopy.app/Contents/**/*.dylib").each do |file|
-      system "codesign", "--force", "-s", "-", file
+    Find.find("build/Scopy.app/Contents") do |file|
+      next unless File.file?(file)
+
+      chmod "u+w", file
+      begin
+        system "codesign", "--force", "-s", "-", file
+      rescue
+        nil
+      end
     end
-    # Ignore error for this one
-    begin
-      system "codesign", "--force", "-s", "-", "build/Scopy.app/Contents/MacOS/Scopy"
-    rescue
-      nil
-    end
-    system "codesign", "--force", "-s", "-", "build/Scopy.app/Contents/MacOS/iio-emu"
 
     prefix.install "build/Scopy.app"
   end
