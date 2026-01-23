@@ -238,6 +238,10 @@ class Scopy < Formula
       "deps/karchive"
     cmake_build_this "deps/karchive"
 
+    system "git", "clone", "--depth=1", "-b", "main", "--recursive", "https://github.com/analogdevicesinc/genalyzer.git",
+      "deps/genalyzer"
+    cmake_build_this "deps/genalyzer"
+
     system "git", "clone", "--depth=1", "-b", "main", "--recursive",
       "https://github.com/analogdevicesinc/iio-emu.git", "deps/iio-emu"
     cmake_build_this "deps/iio-emu", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
