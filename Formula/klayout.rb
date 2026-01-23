@@ -9,7 +9,7 @@ class Klayout < Formula
   depends_on "libgit2"
   depends_on "python"
   depends_on "qt"
-  depends_on "ruby"
+  depends_on "ruby@3.4"
 
   def install
     # ENV["AR"] = "ar"
