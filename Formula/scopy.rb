@@ -165,8 +165,8 @@ class Scopy < Formula
     cmake_build_this "deps/libiio", "-DWITH_TESTS=OFF", "-DWITH_DOC=OFF",
       "-DHAVE_DNS_SD=ON", "-DENABLE_DNS_SD=ON", "-DWITH_MATLAB_BINDINGS=OFF",
       "-DCSHARP_BINDINGS=OFF", "-DPYTHON_BINDINGS=OFF", "-DINSTALL_UDEV_RULE=OFF",
-      "-DWITH_SERIAL_BACKEND=ON", "-DENABLE_IPV6=OFF", "-DOSX_PACKAGE=OFF",
-      "-DOSX_INSTALL_FRAMEWORKSDIR=#{lib}"
+      "-DWITH_SERIAL_BACKEND=ON", "-DENABLE_IPV6=OFF",
+      "-DOSX_PACKAGE=OFF", "-DOSX_INSTALL_FRAMEWORKSDIR=#{lib}"
 
     system "git", "clone", "--depth=1", "-b", "main", "--recursive",
       "https://github.com/analogdevicesinc/libad9361-iio.git", "deps/libad9361-iio"
@@ -177,7 +177,8 @@ class Scopy < Formula
       "https://github.com/analogdevicesinc/libm2k.git", "deps/libm2k"
     cmake_build_this "deps/libm2k", "-DIIO_INCLUDE_DIRS=#{lib}/iio.Framework/Headers",
       "-DENABLE_PYTHON=OFF", "-DENABLE_CSHARP=OFF", "-DBUILD_EXAMPLES=OFF", "-DENABLE_TOOLS=OFF",
-      "-DINSTALL_UDEV_RULES=OFF", "-DENABLE_LOG=OFF", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+      "-DINSTALL_UDEV_RULES=OFF", "-DENABLE_LOG=OFF",
+      "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 
     system "git", "clone", "--depth=1", "-b", "scopy2-maint-3.10", "--recursive",
       "https://github.com/analogdevicesinc/gnuradio.git", "deps/gnuradio"
@@ -229,15 +230,16 @@ class Scopy < Formula
 
     system "git", "clone", "--depth=1", "-b", "kf5", "--recursive", "https://github.com/KDE/extra-cmake-modules.git",
       "deps/ECM"
-    cmake_build_this "deps/ECM"
+    cmake_build_this "deps/ECM", "-DBUILD_TESTING=OFF", "-DBUILD_HTML_DOCS=OFF",
+      "-DBUILD_MAN_DOCS=OFF", "-DBUILD_QTHELP_DOCS=OFF"
 
     system "git", "clone", "--depth=1", "-b", "kf5", "--recursive", "https://github.com/KDE/karchive.git",
       "deps/karchive"
-    cmake_build_this "deps/karchive"
+    cmake_build_this "deps/karchive", "-DBUILD_TESTING=OFF"
 
     system "git", "clone", "--depth=1", "-b", "main", "--recursive", "https://github.com/analogdevicesinc/genalyzer.git",
       "deps/genalyzer"
-    cmake_build_this "deps/genalyzer"
+    cmake_build_this "deps/genalyzer", "-DBUILD_TESTING=OFF", "-DBUILD_SHARED_LIBS=ON"
 
     system "git", "clone", "--depth=1", "-b", "main", "--recursive",
       "https://github.com/analogdevicesinc/iio-emu.git", "deps/iio-emu"
