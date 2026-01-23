@@ -46,36 +46,78 @@ class Scopy < Formula
 
   # Instead of using dylibbundler, we use our own script to copy and dereference
   # all the dylibs.
+  def copy_framework(libpath, targetdir, referring_file, old_name)
+    # `libpath` is a path to the dylib in the framework,
+    # like `some/path/iio.framework/Versions/0.26/iio`
+    # `targetdir` is the destination to which discovered dylibs should be moved to
+    # `referring_file` is the original file that links to `libpath`.
+    # Used to modify the loader table to point to the new file
+    # `old_name` is the old entry in the loader table, which might be the same as `libpath`
+    #
+    # Find the first parent directory that ends with .framework
+    frameworkpath = libpath
+    frameworkpath = frameworkpath.parent until frameworkpath.basename.to_s.end_with?(".framework")
+    frameworkname = frameworkpath.basename
+    # Copy the framework to the destination if it doesn't exist
+    dest = targetdir + frameworkname
+    cp_r frameworkpath, targetdir unless dest.exist?
+    # Find the relative path from the rpath to the dylib
+    relative_path = frameworkname + libpath.relative_path_from(frameworkpath)
+    new_name = "@executable_path/../Frameworks/#{relative_path}"
+    MachO::Tools.change_install_name(referring_file, old_name, new_name)
+    fix_dylib(targetdir + relative_path)
+  end
+
+  def copy_dylib(libpath, targetdir, referring_file, old_name)
+    # Copy a single .dylib; see `copy_framework`.
+    basename = libpath.basename
+    dest = targetdir + basename
+    cp libpath, targetdir unless dest.exist?
+    new_name = "@executable_path/../Frameworks/#{basename}"
+    MachO::Tools.change_install_name(referring_file, old_name, new_name)
+    fix_dylib(dest)
+  end
+
   def fix_dylib(dylib)
     frameworkbase = Pathname.new("build/Scopy.app/Contents/Frameworks")
     chmod "u+w", dylib
-    dylibs = MachO::Tools.dylibs(dylib).select do |libpath|
+    dylibs = MachO::Tools.dylibs(dylib).select do |libpathstr|
       # Do not copy macOS system libraries, but always copy any Homebrew libraries
-      libpath.start_with?(HOMEBREW_PREFIX) || (libpath.start_with?("/") && !libpath.start_with?("/usr/lib") && !libpath.start_with?("/System/Library"))
+      # And best-effort deal with @rpath ones
+      libpathstr.start_with?(HOMEBREW_PREFIX, "@rpath") ||
+        (libpathstr.start_with?("/") && !libpathstr.start_with?("/usr/lib") && !libpathstr.start_with?("/System/Library"))
     end
     dylibs.each do |libpathstr|
-      libpath = Pathname.new(libpathstr)
-      if libpathstr.include?(".framework")
-        # Find the first parent directory that ends with .framework
-        frameworkpath = libpath
-        frameworkpath = frameworkpath.parent until frameworkpath.basename.to_s.end_with?(".framework")
-        frameworkname = frameworkpath.basename
-        # Copy the framework to the destination if it doesn't exist
-        dest = frameworkbase + frameworkname
-        cp_r frameworkpath, frameworkbase unless dest.exist?
-        # Find the relative path from the rpath to the dylib
-        relative_path = frameworkname + libpath.relative_path_from(frameworkpath)
-        newpath = "@executable_path/../Frameworks/#{relative_path}"
-        MachO::Tools.change_install_name(dylib, libpath.to_s, newpath)
-        fix_dylib(frameworkbase + relative_path)
+      if libpathstr.start_with?("@rpath")
+        lib_fromrpath = libpathstr.delete_prefix("@rpath/")
+        # If this is not the prefix, something is very wrong
+        raise RuntimeError if lib_fromrpath == libpathstr
+        # Don't need to deal with this case
+        next if (frameworkbase + lib_fromrpath).exist?
+
+        maybe_prefix_fullpath = lib + lib_fromrpath
+        if maybe_prefix_fullpath.exist?
+          if maybe_prefix_fullpath.to_s.include?(".framework")
+            copy_framework(maybe_prefix_fullpath, frameworkbase, dylib, libpathstr)
+          else
+            copy_dylib(maybe_prefix_fullpath, frameworkbase, dylib, libpathstr)
+          end
+        else
+          opoo "Warning: Cannot resolve rpath #{libpathstr}"
+        end
+      elsif libpathstr.include?(".framework")
+        libpath = Pathname.new(libpathstr)
+        copy_framework(libpath, frameworkbase, dylib, libpathstr)
       else
-        basename = libpath.basename
-        dest = frameworkbase + basename
-        cp libpath, frameworkbase unless dest.exist?
-        newpath = "@executable_path/../Frameworks/#{basename}"
-        MachO::Tools.change_install_name(dylib, libpath.to_s, newpath)
-        fix_dylib(frameworkbase + basename)
+        libpath = Pathname.new(libpathstr)
+        copy_dylib(libpath, frameworkbase, dylib, libpathstr)
       end
+    end
+    # Libraries added by the Scopy build script uses @rpath; make sure they still work
+    begin
+      MachO::Tools.add_rpath(dylib, "@executable_path/../Frameworks")
+    rescue MachO::RpathExistsError
+      nil
     end
   end
 
@@ -200,7 +242,7 @@ class Scopy < Formula
 
     fix_dylib("build/Scopy.app/Contents/MacOS/Scopy")
     fix_dylib("build/Scopy.app/Contents/MacOS/iio-emu")
-    Dir.glob("build/Scopy.app/Contents/MacOS/plugins/*.dylib").each do |file|
+    Dir.glob("build/Scopy.app/Contents/MacOS/**/plugins/*.dylib").each do |file|
       fix_dylib(file)
     end
 
@@ -227,20 +269,22 @@ pydst + "Versions" + pycurrentversion
     Dir.glob(frameworkbase + "libgnuradio-iio*").each do |file|
         MachO::Tools.add_rpath(file, "@executable_path/../Frameworks/iio.framework")
     rescue MachO::RpathExistsError
+        nil
     end
     system "macdeployqt", "build/Scopy.app"
 
     # Code signing
     Find.find("build/Scopy.app/Contents") do |file|
+      # Only sign regular files
       next unless File.file?(file)
+      # Skip this and sign it last
+      next if file == "build/Scopy.app/Contents/MacOS/Scopy"
 
       chmod "u+w", file
-      begin
-        system "codesign", "--force", "-s", "-", file
-      rescue
-        nil
-      end
+      system "codesign", "--force", "--sign", "-", file
     end
+    # Finally sign this after the bundle is finished
+    system "codesign", "--force", "--sign", "-", "build/Scopy.app/Contents/MacOS/Scopy"
 
     prefix.install "build/Scopy.app"
   end
