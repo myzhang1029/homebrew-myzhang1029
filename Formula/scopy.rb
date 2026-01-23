@@ -44,81 +44,109 @@ class Scopy < Formula
     end
   end
 
+  WANTED_RPATH_BASE = "@executable_path/../Frameworks".freeze
+
   # Instead of using dylibbundler, we use our own script to copy and dereference
   # all the dylibs.
-  def copy_framework(libpath, targetdir, referring_file, old_name)
-    # `libpath` is a path to the dylib in the framework,
-    # like `some/path/iio.framework/Versions/0.26/iio`
-    # `targetdir` is the destination to which discovered dylibs should be moved to
-    # `referring_file` is the original file that links to `libpath`.
-    # Used to modify the loader table to point to the new file
-    # `old_name` is the old entry in the loader table, which might be the same as `libpath`
+  def copy_framework(libpath, targetdir, referring_macho, old_name, rpath_search)
+    # Copy a framework; see `copy_macho_dep` for argument description.
     #
     # Find the first parent directory that ends with .framework
     frameworkpath = libpath
     frameworkpath = frameworkpath.parent until frameworkpath.basename.to_s.end_with?(".framework")
+    # Now the basename would be the framework name, like `iio.framework`
     frameworkname = frameworkpath.basename
     # Copy the framework to the destination if it doesn't exist
     dest = targetdir + frameworkname
     cp_r frameworkpath, targetdir unless dest.exist?
-    # Find the relative path from the rpath to the dylib
+    # Find the relative path of the macho, from the framework bundle root,
+    # like `Versions/0.26/iio`.
+    # Prepend the framework name to form the new install name
     relative_path = frameworkname + libpath.relative_path_from(frameworkpath)
-    new_name = "@executable_path/../Frameworks/#{relative_path}"
-    MachO::Tools.change_install_name(referring_file, old_name, new_name)
-    fix_dylib(targetdir + relative_path)
+    new_name = "#{WANTED_RPATH_BASE}/#{relative_path}"
+    referring_macho.change_install_name(old_name, new_name)
+    fix_dylib(targetdir + relative_path, targetdir, rpath_search)
   end
 
-  def copy_dylib(libpath, targetdir, referring_file, old_name)
-    # Copy a single .dylib; see `copy_framework`.
+  def copy_single_dylib(libpath, targetdir, referring_macho, old_name, rpath_search)
+    # Copy a single .dylib; see `copy_macho_dep` for argument description.
     basename = libpath.basename
     dest = targetdir + basename
     cp libpath, targetdir unless dest.exist?
-    new_name = "@executable_path/../Frameworks/#{basename}"
-    MachO::Tools.change_install_name(referring_file, old_name, new_name)
-    fix_dylib(dest)
+    new_name = "#{WANTED_RPATH_BASE}/#{basename}"
+    referring_macho.change_install_name(old_name, new_name)
+    fix_dylib(dest, targetdir, rpath_search)
   end
 
-  def fix_dylib(dylib)
-    frameworkbase = Pathname.new("build/Scopy.app/Contents/Frameworks")
-    chmod "u+w", dylib
-    dylibs = MachO::Tools.dylibs(dylib).select do |libpathstr|
+  def copy_macho_dep(libpath, targetdir, referring_macho, old_name, rpath_search)
+    # Copy `libpath` to `targetdir`.
+    #
+    # - `old_name` should be an entry in the loader table of `referring_macho`.
+    #
+    # - `libpath` should be the on-disk location of `old_name`. They may be the same.
+    #   If `libpath` refers to a framework, it should point to the Mach-O file inside the bundle,
+    #   like `some/path/iio.framework/Versions/0.26/iio`, instead of the bundle root.
+    #
+    # - `targetdir` is the physical location of the `Frameworks` directory of the application bundle.
+    #
+    # - `referring_macho` is the original file that links to `libpath`.
+    #   Its loader table (the `LC_LOAD_DYLIB` command) will be updated to point to `WANTED_RPATH_BASE`.
+    #
+    # - `rpath_search` is only used to recursively call `fix_dylib`.
+    if libpath.to_s.include?(".framework")
+      copy_framework(libpath, targetdir, referring_macho, old_name, rpath_search)
+    else
+      copy_single_dylib(libpath, targetdir, referring_macho, old_name, rpath_search)
+    end
+  end
+
+  def fix_dylib(machopath, targetdir, rpath_search)
+    # Copy non-system dylibs referred by `machopath` to `targetdir`, and update
+    # the install names to point to the new destination via an `@executable_path` relative path.
+    #
+    # `rpath_search` is an array of `Pathname`s where we try to locate `@rpath` entries.
+    chmod "u+w", machopath
+    macho = MachO.open(machopath)
+
+    referred_dylibs = macho.linked_dylibs.select do |libpathstr|
       # Do not copy macOS system libraries, but always copy any Homebrew libraries
       # And best-effort deal with @rpath ones
       libpathstr.start_with?(HOMEBREW_PREFIX, "@rpath") ||
-        (libpathstr.start_with?("/") && !libpathstr.start_with?("/usr/lib") && !libpathstr.start_with?("/System/Library"))
+        (libpathstr.start_with?("/") && !libpathstr.start_with?("/usr/lib") &&
+         !libpathstr.start_with?("/System/Library"))
     end
-    dylibs.each do |libpathstr|
+    referred_dylibs.each do |libpathstr|
       if libpathstr.start_with?("@rpath")
         lib_fromrpath = libpathstr.delete_prefix("@rpath/")
-        # If this is not the prefix, something is very wrong
+        # If `@rpath/` is not the prefix, something is very wrong with this loader command
         raise RuntimeError if lib_fromrpath == libpathstr
-        # Don't need to deal with this case
-        next if (frameworkbase + lib_fromrpath).exist?
 
-        maybe_prefix_fullpath = lib + lib_fromrpath
-        if maybe_prefix_fullpath.exist?
-          if maybe_prefix_fullpath.to_s.include?(".framework")
-            copy_framework(maybe_prefix_fullpath, frameworkbase, dylib, libpathstr)
-          else
-            copy_dylib(maybe_prefix_fullpath, frameworkbase, dylib, libpathstr)
-          end
+        if (targetdir + lib_fromrpath).exist?
+          # This framework or dylib is already in `targetdir`
+          # We just change the install name
+          macho.change_install_name(libpathstr, "#{WANTED_RPATH_BASE}/#{lib_fromrpath}")
+          next
+        end
+
+        found_parent = rpath_search.find do |candidate|
+          (candidate + lib_fromrpath).exist?
+        end
+        if found_parent
+          copy_macho_dep(found_parent + lib_fromrpath, targetdir, macho, libpathstr, rpath_search)
         else
           opoo "Warning: Cannot resolve rpath #{libpathstr}"
         end
-      elsif libpathstr.include?(".framework")
-        libpath = Pathname.new(libpathstr)
-        copy_framework(libpath, frameworkbase, dylib, libpathstr)
       else
         libpath = Pathname.new(libpathstr)
-        copy_dylib(libpath, frameworkbase, dylib, libpathstr)
+        copy_macho_dep(libpath, targetdir, macho, libpathstr, rpath_search)
       end
     end
     # Libraries added by the Scopy build script uses @rpath; make sure they still work
-    begin
-      MachO::Tools.add_rpath(dylib, "@executable_path/../Frameworks")
-    rescue MachO::RpathExistsError
-      nil
+    if macho.rpaths.exclude?(WANTED_RPATH_BASE) && macho.rpaths.exclude?(WANTED_RPATH_BASE + "/")
+      macho.add_rpath(WANTED_RPATH_BASE)
     end
+    # Don't forget to write the changes
+    macho.write!
   end
 
   def install
@@ -227,7 +255,8 @@ class Scopy < Formula
       "-S", ".", "-B", "build", *std_cmake_args
     system "cmake", "--build", "build"
 
-    mkdir "build/Scopy.app/Contents/Frameworks"
+    targetdir = Pathname.new("build/Scopy.app/Contents/Frameworks")
+    mkdir_p targetdir
     cp "deps/iio-emu/build/iio-emu", "build/Scopy.app/Contents/MacOS/iio-emu"
 
     # Manually rename libqwt before running dylibbundler
@@ -240,10 +269,10 @@ class Scopy < Formula
       MachO::Tools.change_install_name("build/Scopy.app/Contents/MacOS/Scopy", libpath, newpath)
     end
 
-    fix_dylib("build/Scopy.app/Contents/MacOS/Scopy")
-    fix_dylib("build/Scopy.app/Contents/MacOS/iio-emu")
+    fix_dylib("build/Scopy.app/Contents/MacOS/Scopy", targetdir, [lib])
+    fix_dylib("build/Scopy.app/Contents/MacOS/iio-emu", targetdir, [lib])
     Dir.glob("build/Scopy.app/Contents/MacOS/**/plugins/*.dylib").each do |file|
-      fix_dylib(file)
+      fix_dylib(file, targetdir, [lib])
     end
 
     frameworkbase = Pathname.new("build/Scopy.app/Contents/Frameworks")
@@ -264,10 +293,10 @@ pydst + "Versions" + pycurrentversion
     ln_s "Versions/Current/Headers", "#{pydst}/Headers" unless (pydst + "Headers").exist?
 
     cp_r "#{lib}/iio.Framework", frameworkbase unless (frameworkbase + "iio.Framework").exist?
-    fix_dylib("build/Scopy.app/Contents/Frameworks/iio.framework/iio")
+    fix_dylib("build/Scopy.app/Contents/Frameworks/iio.framework/iio", targetdir, [lib])
 
     Dir.glob(frameworkbase + "libgnuradio-iio*").each do |file|
-        MachO::Tools.add_rpath(file, "@executable_path/../Frameworks/iio.framework")
+        MachO::Tools.add_rpath(file, "#{WANTED_RPATH_BASE}/iio.framework")
     rescue MachO::RpathExistsError
         nil
     end
