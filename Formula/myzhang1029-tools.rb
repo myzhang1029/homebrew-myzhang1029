@@ -1,7 +1,7 @@
 class Myzhang1029Tools < Formula
   desc "My collection of tools"
   homepage "https://github.com/myzhang1029"
-  url "https://example.com/index.html"
+  url "https://maiyun.me/index.html"
   version "1.1"
   license "CC0-1.0"
 
@@ -31,7 +31,7 @@ class Myzhang1029Tools < Formula
   depends_on "lame"
   depends_on "libarchive"
   depends_on "libtool"
-  depends_on "lsusb"
+  depends_on "lsusb-laniksj"
   depends_on "lzip"
   depends_on "md5deep"
   depends_on "nbtscan"
