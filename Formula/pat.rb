@@ -1,8 +1,8 @@
 class Pat < Formula
   desc "Cross-platform Winlink client written in Go"
   homepage "https://getpat.io"
-  url "https://github.com/la5nta/pat/archive/refs/tags/v0.17.0.tar.gz"
-  sha256 "a8daf4d693cef17f906dcd192e5531830e35a980ac90f98a2a7ddac1602811b0"
+  url "https://github.com/la5nta/pat/archive/refs/tags/v0.19.2.tar.gz"
+  sha256 "d630001c81a4f0cb461735b1f0d17af19f23de2e10812b28f5d2d96e654ad800"
   license "MIT"
 
   depends_on "go" => :build

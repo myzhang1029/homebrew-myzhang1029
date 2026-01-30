@@ -1,8 +1,8 @@
 class HashcatUtils < Formula
   desc "Small utilities that are useful in advanced password cracking"
   homepage "https://hashcat.net/wiki/doku.php?id=hashcat_utils"
-  url "https://github.com/hashcat/hashcat-utils/archive/refs/tags/v1.9.tar.gz"
-  sha256 "9ddda7f9dfeebfde95b2e980241730262a7f512ceb37941c38b590721d6b6921"
+  url "https://github.com/hashcat/hashcat-utils/archive/refs/tags/v1.10.tar.gz"
+  sha256 "0f2ea19ee0ed12593e991aa73d6ffdf2c38b54e11dca43fa25f14d46945d2642"
   license "MIT"
 
   livecheck do
