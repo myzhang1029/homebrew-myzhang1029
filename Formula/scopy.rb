@@ -17,7 +17,6 @@ class Scopy < Formula
   depends_on "gnu-sed" => :build
   depends_on "libtool" => :build
   depends_on "pkgconf" => :build
-  depends_on "wget" => :build
   depends_on "boost@1.85"
   depends_on "doxygen"
   depends_on "fftw"
@@ -133,7 +132,7 @@ class Scopy < Formula
         if found_parent
           copy_macho_dep(found_parent + lib_fromrpath, targetdir, macho, libpathstr, rpath_search)
         else
-          opoo "Warning: Cannot resolve rpath #{libpathstr}"
+          opoo "Cannot resolve rpath #{libpathstr}"
         end
         # else: a @... path that we don't know how to handle. Leave it as-is
       end
@@ -309,6 +308,17 @@ pydst + "Versions" + pycurrentversion
     system "codesign", "--force", "--sign", "-", "build/Scopy.app/Contents/MacOS/Scopy"
 
     prefix.install "build/Scopy.app"
+  end
+
+  def caveats
+    <<~EOS
+      This installation script does not link the app to /Applications.
+
+      To find Scopy in Launchpad, run
+      ```
+      ln -s #{opt_prefix}/Scopy.app /Application
+      ```
+    EOS
   end
 
   test do

@@ -51,7 +51,6 @@ class Myzhang1029Tools < Formula
   depends_on "telnet"
   depends_on "tmux"
   depends_on "tor"
-  depends_on "trash"
   depends_on "vim"
   depends_on "yt-dlp"
   depends_on "zmap"
