@@ -7,17 +7,6 @@ cask "amazon-corretto-8" do
   desc "OpenJDK distribution from Amazon, version 8"
   homepage "https://corretto.aws/"
 
-  livecheck do
-    url "https://github.com/corretto/corretto-8"
-    regex(/^v?(\d+(?:\.\d+)+)$/i)
-    strategy :github_latest do |json, regex|
-      match = json["tag_name"]&.match(regex)
-      next if match.blank?
-
-      match[1]
-    end
-  end
-
   deprecate! date:    "2025-09-22",
              because: "is replaced by homebrew/cask/corretto@8"
 
