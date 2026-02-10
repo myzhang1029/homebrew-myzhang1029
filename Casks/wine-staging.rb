@@ -1,7 +1,7 @@
 # From homebrew/cask/wine@staging
 cask "wine-staging" do
-  version "11.1"
-  sha256 "44b797ca4dd8b3034fbd2064b0c097a4c6c17a1cf5507949a04efd5940227658"
+  version "11.2"
+  sha256 "73404ea39ebc078aaddf769543f134d70c56a1167336e363308a5e315fb55816"
 
   # Current winehq packages are deprecated and these are packages from
   # the new maintainers that will eventually be pushed to Winehq.
@@ -37,7 +37,6 @@ cask "wine-staging" do
     "wine@devel",
     "wine@staging",
   ]
-  depends_on cask: "gstreamer-runtime"
 
   app "Wine Staging.app"
   dir_path = "#{appdir}/Wine Staging.app/Contents/Resources"
