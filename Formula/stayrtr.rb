@@ -1,8 +1,8 @@
 class Stayrtr < Formula
   desc "RPKI-To-Router server implementation in Go"
   homepage "https://github.com/bgp/stayrtr"
-  url "https://github.com/bgp/stayrtr/archive/refs/tags/v0.6.3.tar.gz"
-  sha256 "e72beada355dce8e97c08873b109c722e9544f0bce33b5d0651b2b3a0177c9ec"
+  url "https://github.com/bgp/stayrtr/archive/refs/tags/v0.6.4.tar.gz"
+  sha256 "f514fb336fab43d080b9a29f1e8336e330515db6b19e8d26ba5b1f266d31ed73"
   license "BSD-3-Clause"
 
   depends_on "go" => :build
