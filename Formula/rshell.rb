@@ -3,8 +3,8 @@ class Rshell < Formula
 
   desc "Remote Shell for MicroPython"
   homepage "https://github.com/dhylands/rshell"
-  url "https://github.com/dhylands/rshell/archive/refs/tags/v0.0.32.tar.gz"
-  sha256 "faac6d0636bea81af8b95e55517a2ff59bb513c96b40e1f1ae0485c3662b9043"
+  url "https://github.com/dhylands/rshell/archive/refs/tags/v0.0.36.tar.gz"
+  sha256 "db6e6c19714caf227c18a3ccf3d27b2b3126b1cbbf293c80b3ab1cefafd8cc9f"
   license "MIT"
 
   depends_on "python@3.14"
