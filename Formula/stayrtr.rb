@@ -14,14 +14,14 @@ class Stayrtr < Formula
     ENV["GOOS"] = os
     system "make", "build-all"
     mkdir bin
-    cp "dist/stayrtr--#{os}-#{arch}", "#{bin}/stayrtr"
-    cp "dist/rtrdump--#{os}-#{arch}", "#{bin}/rtrdump"
-    cp "dist/rtrmon--#{os}-#{arch}", "#{bin}/rtrmon"
+    cp "dist/stayrtr--#{os}-#{arch}", bin/"stayrtr"
+    cp "dist/rtrdump--#{os}-#{arch}", bin/"rtrdump"
+    cp "dist/rtrmon--#{os}-#{arch}", bin/"rtrmon"
   end
 
   test do
-    system "stayrtr", "-version"
-    system "rtrdump", "-version"
-    system "rtrmon", "-version"
+    system bin/"stayrtr", "-version"
+    system bin/"rtrdump", "-version"
+    system bin/"rtrmon", "-version"
   end
 end

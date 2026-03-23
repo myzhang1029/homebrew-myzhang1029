@@ -24,6 +24,6 @@ class Rshell < Formula
   end
 
   test do
-    system "rshell", "--help"
+    system bin/"rshell", "--help"
   end
 end
