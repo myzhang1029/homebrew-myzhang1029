@@ -1,5 +1,5 @@
 cask "wfview" do
-  version "2.11"
+  version "2.23"
   sha256 "fd5b89d9eea1a70c80691894284df5ee4f2a85da5bbc7f46e5cf5bb83832cc6d"
 
   version_for_url = version.tr(".", "-")
@@ -12,7 +12,7 @@ cask "wfview" do
     url "https://gitlab.com/eliggett/wfview.git"
   end
 
-  depends_on macos: ">= :monterey"
+  depends_on macos: :monterey
 
   app "wfview.app"
 
