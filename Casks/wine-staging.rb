@@ -1,7 +1,7 @@
 # From homebrew/cask/wine@staging
 cask "wine-staging" do
-  version "11.4"
-  sha256 "111a7b6b37c816aef48bf95887dc88f5601029466fefd48886a4f827e8efe19c"
+  version "11.10"
+  sha256 "940bdd1a177872020be01c5c33917cb8eecc1cc3193ad554914fb6efd90d7889"
 
   # Current winehq packages are deprecated and these are packages from
   # the new maintainers that will eventually be pushed to Winehq.
@@ -37,6 +37,7 @@ cask "wine-staging" do
     "wine@devel",
     "wine@staging",
   ]
+  depends_on :macos
 
   app "Wine Staging.app"
   dir_path = "#{appdir}/Wine Staging.app/Contents/Resources"
