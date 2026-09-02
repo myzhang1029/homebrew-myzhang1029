@@ -48,7 +48,6 @@ class Myzhang1029Tools < Formula
   depends_on "ndisc6"
   depends_on "ninja"
   depends_on "nmap"
-  depends_on "opencc"
   depends_on "openssh"
   depends_on "pdf2svg"
   depends_on "plzip"
