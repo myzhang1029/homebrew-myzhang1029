@@ -2,8 +2,8 @@ class LinuxBuildHeaders < Formula
   # To be used with HOST_EXTRACFLAGS=-I/opt/homebrew/opt/linux-build-headers/include make LLVM=1
   desc "Header files for building the Linux kernel"
   homepage "https://sourceware.org/glibc"
-  url "https://ftpmirror.gnu.org/gnu/gnu/glibc/glibc-2.44.tar.xz"
-  sha256 "d9c86c6b5dbddb43a3e08270c5844fc5177d19442cf5b8df4be7c07cd5fa3831"
+  url "https://ftp.gnu.org/gnu/glibc/glibc-2.44.tar.xz"
+  sha256 "37f600f2bef3c5e8300147059568b2a2e40a7ad6ccc65ce942556d49429cc667"
   license "GPL-2.0-only"
   head "https://sourceware.org/git/glibc.git"
 
