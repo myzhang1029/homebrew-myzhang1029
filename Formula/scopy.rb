@@ -1,5 +1,4 @@
 require "find"
-require "pathname"
 require "macho"
 
 class Scopy < Formula
@@ -7,6 +6,10 @@ class Scopy < Formula
 
   desc "Multi-functional software toolset with strong capabilities for signal analysis"
   homepage "https://wiki.analog.com/university/tools/m2k/scopy"
+  url "https://github.com/analogdevicesinc/scopy/archive/refs/tags/v2.2.1.tar.gz"
+  # No glob characters otherwise qmake generates bad Makefiles
+  version "2.2.1"
+  sha256 "eff912b786c57acf6523db40a32d3e266b78aa582190ea392188c6fb9ea58c43"
   license "GPL-3.0-or-later"
   head "https://github.com/analogdevicesinc/scopy.git", branch: "main"
   keg_only "prefix only contains dependencies"
@@ -284,6 +287,12 @@ class Scopy < Formula
     # look for them.
     ENV.prepend_path "PKG_CONFIG_PATH", "#{lib}/pkgconfig"
 
+    # Initialize repo so that rev parsing works
+    system "git", "init"
+    system "git", "config", "user.email", "builder@nobody.invalid"
+    system "git", "config", "user.name", "Builder"
+    system "git", "commit", "--allow-empty", "-m", "Initial"
+
     # Make it link to qwt using absolute path so that dylibbundler can find it
     system "cmake", "-DENABLE_TESTING=OFF", "-DCMAKE_EXE_LINKER_FLAGS=-L#{lib}",
       "-DCMAKE_MODULE_LINKER_FLAGS=-L#{lib}", "-DCMAKE_SHARED_LINKER_FLAGS=-L#{lib}",
@@ -325,9 +334,9 @@ class Scopy < Formula
     fix_dylib("build/Scopy.app/Contents/Frameworks/iio.framework/iio", targetdir, [lib])
 
     Dir.glob(frameworkbase + "libgnuradio-iio*").each do |file|
-        MachO::Tools.add_rpath(file, "#{DEFAULT_WANTED_INSTALL_NAME_BASE}/iio.framework")
+      MachO::Tools.add_rpath(file, "#{DEFAULT_WANTED_INSTALL_NAME_BASE}/iio.framework")
     rescue MachO::RpathExistsError
-        nil
+      nil
     end
     system "macdeployqt", "build/Scopy.app"
 
