@@ -1,5 +1,4 @@
 require "find"
-require "pathname"
 require "macho"
 
 class Scopy < Formula
@@ -7,6 +6,9 @@ class Scopy < Formula
 
   desc "Multi-functional software toolset with strong capabilities for signal analysis"
   homepage "https://wiki.analog.com/university/tools/m2k/scopy"
+  url "https://github.com/analogdevicesinc/scopy/archive/0b64b6a0871ba638249f1678c8d71ba195d0334c.tar.gz"
+  version "2.2.1_56qt6" # No glob characters otherwise qmake generates bad Makefiles
+  sha256 "a7977e1b44af936e4dc4e23bcf5ae8f4ade3c840143e81bf407c6fb8f87f75d8"
   license "GPL-3.0-or-later"
   head "https://github.com/analogdevicesinc/scopy.git", branch: "main"
   keg_only "prefix only contains dependencies"
@@ -29,7 +31,6 @@ class Scopy < Formula
   depends_on "libxml2"
   depends_on "libzip"
   depends_on "python3"
-  depends_on "qt@5"
   depends_on "spdlog"
   depends_on "volk"
   # This is an unlisted dependency
@@ -183,11 +184,24 @@ class Scopy < Formula
 
   def install
     # Install Mako for volk (build dependency)
-    venv = virtualenv_create("deps/mako")
-    venv.pip_install ["mako", "setuptools", "markupsafe"] # setuptools is needed for markupsafe in Python 3.12
+    mako_venv = virtualenv_create("deps/mako")
+    mako_venv.pip_install ["mako", "setuptools", "markupsafe"] # setuptools is needed for markupsafe in Python 3.12
+    qt_venv = virtualenv_create("deps/qt")
+    qt_venv.pip_install ["aqtinstall", "defusedxml", "humanize", "requests", "urllib3", "idna", "beautifulsoup4", "soupsieve", "charset-normalizer", "typing_extensions", "semantic_version", "texttable", "patch_ng", "py7zr", "brotli", "pyppmd", "pycryptodomex", "pybcj", "psutil", "multivolumefile", "inflate64"]
+
     # Based on Scopy macOS CI on Azure
+
+    qtver = "6.9.3"
+    # We use 6.9.3 instead of 6.8.3 due to framework AGL
+    # Qt6 via aqtinstall (clang_64 universal binary)
+    system "#{buildpath}/deps/qt/bin/aqt", "install-qt", "--outputdir", prefix , "mac", "desktop", qtver, "clang_64", "-m", "qt3d", "qtscxml"
+
+    inreplace "#{prefix}/#{qtver}/macos/lib/QtCore.framework/Headers/qyieldcpu.h" do |s|
+      s.gsub! "QT_BEGIN_NAMESPACE", "#include <arm_acle.h>\nQT_BEGIN_NAMESPACE"
+    end
+
     # Clone and build dependencies
-    system "git", "clone", "--depth=1", "-b", "scopy-v2", "--recursive", "https://github.com/cseci/libserialport",
+    system "git", "clone", "--depth=1", "-b", "master", "--recursive", "https://github.com/cseci/libserialport",
     "deps/libserialport"
     cd "deps/libserialport" do
       system "./autogen.sh"
@@ -243,7 +257,7 @@ class Scopy < Formula
       #   s.gsub! "QWT_SONAME=libqwt.so.$${VER_MAJ}.$${VER_MIN}",
       #   s.gsub! "QWT_SONAME=libqwtmathml.so.$${VER_MAJ}.$${VER_MIN}",
       # end
-      system "qmake", "INCLUDEPATH=#{include}", "LIBS+=-L#{lib}", "qwt.pro"
+      system "#{prefix}/#{qtver}/macos/bin/qmake", "INCLUDEPATH=#{include}", "LIBS+=-L#{lib}", "qwt.pro"
       system "make"
       system "make", "install"
     end
@@ -259,18 +273,18 @@ class Scopy < Formula
       "https://github.com/analogdevicesinc/libtinyiiod.git", "deps/libtinyiiod"
     cmake_build_this "deps/libtinyiiod", "-DBUILD_EXAMPLES=OFF", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 
-    system "git", "clone", "--depth=1", "-b", "2.1", "--recursive", "https://github.com/KDAB/KDDockWidgets.git",
+    system "git", "clone", "--depth=1", "-b", "2.2", "--recursive", "https://github.com/KDAB/KDDockWidgets.git",
       "deps/KDDockWidgets"
-    cmake_build_this "deps/KDDockWidgets"
+    cmake_build_this "deps/KDDockWidgets", "-DKDDockWidgets_QT6=ON", "-DCMAKE_PREFIX_PATH=#{prefix}/#{qtver}/macos"
 
-    system "git", "clone", "--depth=1", "-b", "kf5", "--recursive", "https://github.com/KDE/extra-cmake-modules.git",
+    system "git", "clone", "--depth=1", "-b", "v6.8.0", "--recursive", "https://github.com/KDE/extra-cmake-modules.git",
       "deps/ECM"
     cmake_build_this "deps/ECM", "-DBUILD_TESTING=OFF", "-DBUILD_HTML_DOCS=OFF",
       "-DBUILD_MAN_DOCS=OFF", "-DBUILD_QTHELP_DOCS=OFF"
 
-    system "git", "clone", "--depth=1", "-b", "kf5", "--recursive", "https://github.com/KDE/karchive.git",
+    system "git", "clone", "--depth=1", "-b", "v6.8.0", "--recursive", "https://github.com/KDE/karchive.git",
       "deps/karchive"
-    cmake_build_this "deps/karchive", "-DBUILD_TESTING=OFF"
+    cmake_build_this "deps/karchive", "-DBUILD_TESTING=OFF", "-DCMAKE_PREFIX_PATH=#{prefix}/#{qtver}/macos"
 
     system "git", "clone", "--depth=1", "-b", "main", "--recursive", "https://github.com/analogdevicesinc/genalyzer.git",
       "deps/genalyzer"
@@ -325,9 +339,9 @@ class Scopy < Formula
     fix_dylib("build/Scopy.app/Contents/Frameworks/iio.framework/iio", targetdir, [lib])
 
     Dir.glob(frameworkbase + "libgnuradio-iio*").each do |file|
-        MachO::Tools.add_rpath(file, "#{DEFAULT_WANTED_INSTALL_NAME_BASE}/iio.framework")
+      MachO::Tools.add_rpath(file, "#{DEFAULT_WANTED_INSTALL_NAME_BASE}/iio.framework")
     rescue MachO::RpathExistsError
-        nil
+      nil
     end
     system "macdeployqt", "build/Scopy.app"
 
