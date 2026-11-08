@@ -1,0 +1,57 @@
+class BuildTools < Formula
+  desc "Stuff for compiling things"
+  homepage "https://github.com/myzhang1029"
+  url "https://maiyun.me/index.html"
+  version "1.0"
+  license "CC0-1.0"
+
+  depends_on "asciidoc"
+  depends_on "autoconf"
+  depends_on "autoconf-archive"
+  depends_on "automake"
+  depends_on "bison"
+  depends_on "castxml"
+  depends_on "clang-format"
+  depends_on "cmake"
+  depends_on "docbook"
+  depends_on "docbook-xsl"
+  depends_on "fig2dev"
+  depends_on "flex"
+  depends_on "gcc"
+  depends_on "gengetopt"
+  depends_on "gettext"
+  depends_on "groff"
+  depends_on "gtk-doc"
+  depends_on "help2man"
+  depends_on "imagemagick"
+  depends_on "libtool"
+  depends_on "m4"
+  depends_on "make"
+  depends_on "meson"
+  depends_on "mingw-w64"
+  depends_on "nasm"
+  depends_on "ninja"
+  depends_on "pkgconf"
+  depends_on "po4a"
+  depends_on "quilt"
+  depends_on "sphinx-doc"
+  depends_on "texinfo"
+  depends_on "xmlto"
+  depends_on "xz"
+  # depends_on cask: "myzhang1029/myzhang1029/wine-staging"
+
+  uses_from_macos "gperf"
+  uses_from_macos "perl"
+  uses_from_macos "python"
+  uses_from_macos "rsync"
+  # uses_from_macos "patch"
+  # uses_from_macos "libmagic"
+
+  def install
+    system "sh", "-c", "echo installed > #{prefix}/build-tools"
+  end
+
+  test do
+    system "ls", "#{prefix}/build-tools"
+  end
+end
